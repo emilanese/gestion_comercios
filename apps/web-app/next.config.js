@@ -2,9 +2,6 @@
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@comercios/shared-logic', '@comercios/ui-theme'],
-  typescript: {
-    strict: true
-  },
   modularizeImports: {
     '@radix-ui/react-*': {
       transform: '@radix-ui/react-{{ member }}'
