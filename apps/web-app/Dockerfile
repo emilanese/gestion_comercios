@@ -45,12 +45,16 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs && \
     adduser  --system --uid  1001 nextjs
 
-# Copiar solo lo necesario del build (standalone minimiza el tamaño)
-COPY --from=builder /app/apps/web-app/public            ./public
+# En monorepo, Next.js standalone preserva la estructura de paths:
+#   standalone/apps/web-app/server.js
+#   standalone/apps/web-app/.next/
+# Por eso copiamos todo el standalone al root y usamos la ruta completa.
 COPY --from=builder --chown=nextjs:nodejs \
-     /app/apps/web-app/.next/standalone                  ./
+     /app/apps/web-app/.next/standalone        ./
 COPY --from=builder --chown=nextjs:nodejs \
-     /app/apps/web-app/.next/static                      ./.next/static
+     /app/apps/web-app/public                  ./apps/web-app/public
+COPY --from=builder --chown=nextjs:nodejs \
+     /app/apps/web-app/.next/static            ./apps/web-app/.next/static
 
 USER nextjs
 
@@ -58,5 +62,5 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# next.config.js debe tener output: 'standalone' habilitado
-CMD ["node", "server.js"]
+# server.js está en apps/web-app/ dentro del standalone (estructura monorepo)
+CMD ["node", "apps/web-app/server.js"]
