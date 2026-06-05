@@ -58,8 +58,8 @@ services:
   # pos.avanti.com → ruta /pos  (CAJERO — WatermelonDB en IndexedDB del browser)
   web-app:
     build:
-      context: ./apps/web-app
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: apps/web-app/Dockerfile
     container_name: avanti-web
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080}
