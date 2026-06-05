@@ -1,0 +1,81 @@
+================================================================================
+ESPECIFICACIÓN DE UI/UX: GUÍA DE DISEÑO DE PANTALLAS EN RÁFAGA (TEXTO PLANO)
+================================================================================
+
+--------------------------------------------------------------------------------
+1. LINEAMIENTOS VISUALES GENERALES (SISTEMA DE DISEÑO)
+--------------------------------------------------------------------------------
+- Paleta de Colores (Estilo Clean Slate / Minimalista):
+  * Fondo General: Blanco puro (#FFFFFF) en Modo Claro / Gris Oscuro Neutro (#121212) en Modo Oscuro.
+  * Superficies (Tarjetas/Contenedores): Gris ultra liviano (#F9FAFB) / Gris Pizarra (#1E1E1E).
+  * Color de Acento (Acciones Principales): Azul Eléctrico (#2563EB) o Verde Esmeralda (#10B981) para botones como "Cobrar", "Siguiente" o "Confirmar".
+- Tipografía: Inter o Robust Sans-serif, priorizando legibilidad extrema de números (monto, stock, vuelto) con pesos tipográficos marcados (Font-bold).
+- Componentes Base (Shadcn/ui): Botones con bordes sutilmente suavizados (rounded-md), campos de entrada con sombreado interno ligero (shadow-sm) y transiciones fluidas de foco (duration-200).
+
+--------------------------------------------------------------------------------
+2. PANTALLA: PUNTO DE VENTA (POS WEB DE ESCRITORIO)
+--------------------------------------------------------------------------------
+Diseño de pantalla completa sin scroll vertical (Height: 100vh), dividida estricta en dos columnas asimétricas (60% Izquierda / 40% Derecha).
+
+COLUMNA IZQUIERDA (Captura y Acceso Rápido - 60% ancho):
+- Zona Superior (Input Global Fijo):
+  * Un campo de texto gigante que abarca todo el ancho de la columna. Debe tener el flag 'autoFocus' activo por código de forma permanente. 
+  * Icono de lupa o código de barras integrado a la izquierda. Texto de marcador de posición (Placeholder): "Escanee un producto o busque por Nombre/Marca...".
+- Zona Inferior (Grilla de Productos Sueltos):
+  * Una cuadrícula (Grid) adaptativa de botones rápidos para artículos sin código de barras (Ej: Pan, Facturas, Fruta, Bolsas de Hielo).
+  * Cada botón es una tarjeta limpia con el Nombre del producto centrado y el precio en una esquina superior. Al hacer clic o tocar, inyecta el producto al carrito instantáneamente.
+
+COLUMNA DERECHA (El Carrito Contable y Cierre - 40% ancho):
+- Estructura: Contenedor con borde izquierdo gris sutil y fondo ligeramente diferenciado (bg-muted/50) para dar sensación de bloque de control.
+- Cabecera del Carrito:
+  * Texto en texto plano que indica la Terminal activa (Ej: "Caja Central") y el operador actual (Ej: "Operador: Juan Carlos").
+  * Input de texto plano compacto para el "Nombre del Cliente" (Precargado con "CONSUMIDOR FINAL", borrable con un clic).
+- Cuerpo Central (La Lista de Compra):
+  * Un contenedor con scroll interno independiente donde se listan los artículos agregados.
+  * Cada fila muestra: Cantidad (en un input numérico compacto con botones + y -), Nombre del Producto, Precio Unitario y Subtotal.
+  * Si el producto está afectado por una promoción activa, el precio regular se muestra tachado en gris y al lado resalta el precio de oferta en color verde con un badge mini que dice "PROMO".
+- Pie Inferior (El Bloque de Pago Inmutable):
+  * Indicador de "TOTAL" en tipografía gigante y negrita (text-4xl font-bold).
+  * Fila de vuelto interactiva: Input "Paga con:" al lado del texto "Vuelto: $0.00". Si el cajero tipea un monto mayor en "Paga con", el número de "Vuelto" se recalcula reactivamente en color azul y tamaño grande.
+  * Botón Maestro de Cierre: Ocupa el 100% del ancho inferior de la columna. Color de fondo acento (Verde Esmeralda o Azul Eléctrico), texto blanco: "COBRAR Y FINALIZAR (Enter)".
+
+--------------------------------------------------------------------------------
+3. PANTALLA: OPERACIÓN DE DEPÓSITO EN RÁFAGA (MÓVIL / CELULAR)
+--------------------------------------------------------------------------------
+Diseño de interfaz vertical rígida dividida simétricamente en dos mitades (50% Superior / 50% Inferior), optimizada para usarse con una sola mano en el depósito.
+
+MITAD SUPERIOR (Cámara y Escáner Activo):
+- Muestra el visor de la cámara trasera en tiempo real con un recuadro de enfoque central tenue para la lectura continua de códigos de barras.
+- En la esquina superior derecha, incluye un botón flotante semitransparente con el icono de un teclado para abrir un modal rápido de "Búsqueda Manual por Texto" si el producto no tiene código.
+
+MITAD INFERIOR (La Tarjeta de Carga Activa):
+- Fondo gris claro texturizado que resalta una única tarjeta blanca central (Card Component) con esquinas redondeadas y sombra pronunciada (shadow-lg).
+- Interior de la Tarjeta Blanca:
+  * Texto Principal: Nombre del Producto detectado en letra mediana y negrita (Ej: "Galletitas de Agua 300g").
+  * Texto Secundario: Marca y Categoría en letra chica gris (Ej: "Criollitas | Almacén").
+  * Bloque de Inputs: Un campo numérico gigante centrado en la pantalla con el texto "CANTIDAD" encima. Este input debe tomar el foco de teclado automático (autoFocus) en el microsegundo en que el producto es identificado.
+  * Campos Económicos (Exclusivos para el módulo de INGRESO): Debajo del input de cantidad, se despliegan dos inputs secundarios alineados horizontalmente: "Nuevo Costo ($)" y "Nuevo Precio ($)", precargados con los valores actuales.
+- Acción de Cierre de Bucle:
+  * Un botón inferior que abarca el ancho de la tarjeta: "CONFIRMAR Y SIGUIENTE (Enter)". Al presionarse, la tarjeta parpadea sutilmente en verde como confirmación visual, limpia los campos, envía la novedad Delta y reactiva el foco en el escáner de la mitad superior.
+
+--------------------------------------------------------------------------------
+4. PANTALLA: DASHBOARD ADMINISTRATIVO DEL DUEÑO (PC - 3 COLUMNAS FIJAS)
+--------------------------------------------------------------------------------
+Estructura de escritorio horizontal completa (Layout de 3 Columnas Simultáneas) que aprovecha monitores panorámicos para dar control total sin cambiar de menú.
+
+COLUMNA 1 (Izquierda - Selector y Estado del Negocio - 20% ancho):
+- Menú vertical compacto con fondo oscuro o gris denso.
+- Panel superior con los datos del comercio y el estado de la membresía (Ej: "Plan Pro - Activo" con check verde).
+- Lista de Sucursales de la empresa con un indicador circular en vivo (Verde: Online / Gris: Terminales Offline). Al hacer clic en una sucursal, filtra la información de las columnas centrales y derechas automáticamente.
+
+COLUMNA 2 (Central - Grilla Operativa de Stock Crítico - 55% ancho):
+- El corazón del panel de control. Una tabla interactiva de Shadcn/ui densa (bajos márgenes internos) que lista los productos cuyo stock está por debajo del mínimo.
+- Barra superior de filtrado ráfaga por marcas o categorías mediante selectores rápidos estilo "Píldoras" (Badges seleccionables).
+- Columnas de la Tabla: Código, Producto, Sucursal, Stock Actual (resaltado en rojo si está en estado crítico), Stock Mínimo y Acciones.
+- Interacción Veloz: Al hacer doble clic sobre cualquier fila de producto, la celda de Stock se transforma en un input interactivo para realizar un reabastecimiento o ajuste en caliente sin salir de la grilla.
+
+COLUMNA 3 (Derecha - Telemetría y Alertas en Vivo - 25% ancho):
+- Un feed de actividad vertical que se actualiza en tiempo real mediante los eventos del WebSocket.
+- Bloque Superior (Terminales POS): Tarjetas compactas por cada caja registrada, mostrando el nombre del cajero logueado, la hora de apertura del turno y un indicador de "Sincronizando..." o "Conectado".
+- Bloque Inferior (Alertas Críticas): Mensajes tipo "Toast" fijos cronológicos de eventos importantes del comercio (Ej: "Alerta: Stock de Alfajor Marley llegó a 0 en Sucursal Anexo", "Caja 1: Intento de acceso fallido de PIN bloqueado").
+================================================================================

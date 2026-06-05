@@ -1,0 +1,180 @@
+================================================================================
+DOCUMENTO MAESTRO CENTRAL: CASOS DE USO, REGLAS DE ORO Y MODELOS DER COMPLETOS
+================================================================================
+
+--------------------------------------------------------------------------------
+1. ESPECIFICACIÓN DE CASOS DE USO
+--------------------------------------------------------------------------------
+
+MÓDULO: REGLAS TRANSVERSALES DE RED (Sincronización e Idioma)
+
+Caso de Uso: Handshake y Sincronización Horaria Automática
+- Actores: Aplicación POS (Móvil/Web), Aplicación Backoffice (Móvil/Web), Gestor Cloud (Go).
+- Precondiciones: El dispositivo cliente inicia una conexión WebSocket con el servidor.
+- Flujo Principal:
+  1. Inmediatamente después de establecer la conexión y validar el JWT, el cliente registra su tiempo local exacto (T1).
+  2. El cliente envía un mensaje tipo PING_SYNC al Gestor Cloud.
+  3. El Gestor Cloud inyecta su Timestamp de servidor de alta precisión (T_server) en la respuesta PONG_SYNC.
+  4. El cliente recibe el paquete y marca su tiempo de llegada (T2).
+  5. La librería compartida (packages/shared-logic) calcula la latencia de red y el Delta Horario:
+     Latencia = (T2 - T1) / 2
+     Delta Horario = T_server - (T1 + Latencia)
+- Postcondición: El cliente guarda este Delta en memoria activa. Cualquier ticket, log de auditoría o cambio de precio generado a partir de este momento utilizará: Timestamp Mensaje = Hora Local Actual + Delta Horario.
+
+Caso de Uso: Inicialización y Adaptación Regional de Idioma (i18n)
+- Actores: Sistema (Frontend), Administrador / Empleado.
+- Flujo Principal:
+  1. Al abrir cualquiera de las aplicaciones por primera vez, el sistema detecta automáticamente la configuración regional del dispositivo (navigator.language en Web o Expo Localization en Móvil).
+  2. La librería i18n evalúa el árbol de fallbacks jerárquicos (Ej: es-AR -> es -> en).
+  3. El sistema carga las interfaces consumiendo las variables del archivo JSON correspondiente (locales/es.json). Si detecta un código regional específico (como es-AR), sobrescribe palabras clave del mostrador (Ej: cambia "Cambio" por "Vuelto", o "Bodega" por "Kiosco/Almacén").
+  4. En el Registro: Al crearse la cuenta en el Backoffice, el frontend envía la preferencia detectada al Gestor Cloud, guardándola en el campo comercios.idioma_preferido.
+  5. Cambio Manual: El usuario puede ingresar al menú de Configuración en cualquier momento y cambiar manualmente el idioma/región. Esta acción pisa la variable local, redibuja la UI de inmediato y sincroniza la nueva preferencia con el servidor.
+
+MÓDULO: POS (APLICACIÓN MÓVIL Y WEB)
+
+Caso de Uso: Enrolamiento de Dispositivo POS
+- Actor: Empleado / Cajero.
+- Precondiciones: La app está instalada. El administrador generó un QR de invitación para una sucursal específica desde el Backoffice.
+- Flujo Principal:
+  1. El usuario abre la app del POS y selecciona "Escanear QR de Invitación".
+  2. Escanea el QR; el sistema extrae el Token de Enrolamiento y la URL del Gestor Cloud.
+  3. La app envía una solicitud al Gestor con el id_dispositivo físico y el token.
+  4. El Gestor Cloud valida el token en PostgreSQL, asocia el hardware a la sucursal y responde con las credenciales locales de acceso.
+  5. La app descarga la tabla operativa productos_pos (filtrada para su sucursal), los medios_pago unificados y las ofertas activas. El POS queda listo para operar.
+
+Caso de Uso: Inicio de Sesión y Bloqueo Local
+- Actor: Empleado / Cajero.
+- Flujo Principal:
+  1. El cajero selecciona su usuario de la lista local e introduce su PIN/Contraseña de acceso rápido.
+  2. El sistema valida los datos contra WatermelonDB local. Si es correcto, redirige a la Apertura de Turno.
+- Flujo Alternativo (Bloqueo de Cuenta):
+  1. Al fallar el PIN 3 veces consecutivas, la app se bloquea localmente.
+  2. Si hay internet, notifica al Gestor Cloud. El administrador debe desbloquear la terminal de forma remota desde su pantalla de Backoffice.
+
+Caso de Uso: Apertura de Turno
+- Actor: Empleado / Cajero.
+- Flujo Principal:
+  1. El sistema detecta que no hay turnos activos locales y despliega la pantalla de apertura.
+  2. El cajero ingresa el Monto Inicial de Caja (Efectivo para vuelto) y presiona "Confirmar".
+  3. El sistema registra localmente el evento firmándolo con el Timestamp ajustado por el Delta Horario.
+  4. Si está online, transmite el evento al Backoffice en tiempo real por el canal de la sucursal. Si está offline, lo encola.
+
+Caso de Uso: Venta y Emisión de Tickets (Estructura de POS Simplificada)
+- Actor: Empleado / Cajero.
+- Flujo Principal:
+  1. Agregar Productos (Búsqueda veloz en tabla optimizada):
+     - En Móvil: Presiona el botón de la cámara y escanea el código de barras, o abre la barra superior para buscar manualmente escribiendo por texto.
+     - En Web: El cursor se posiciona por defecto en un input global fijo (autoFocus). Si se pasa un producto por el lector Bluetooth/USB, el periférico inyecta el código + la tecla Enter. Si el producto no tiene código, el cajero tipea en el buscador. 
+     - Ejecución de Query: El sistema ejecuta la consulta directamente sobre la tabla optimizada productos_pos buscando coincidencias en [codigo_barras, nombre, marca, categoria].
+  2. El sistema añade el artículo con cantidad 1 por defecto trayendo el precio y stock directo de la fila de productos_pos. Permite modificar la cantidad o eliminar el ítem.
+  3. El cajero presiona "Cobrar/Finalizar". Abre la pantalla de medios de pago (mapeados de forma idéntica con los definidos en el backend).
+  4. Procesar Pago Mixto: Selecciona el medio de pago. Si el monto recibido en Efectivo es superior, muestra el Vuelto (o término de i18n regional).
+  5. Finalizar Venta e Impacto de Mensajería:
+     - El sistema crea el registro del ticket local en historial_tickets_local con estado_sincronizacion = "PENDIENTE".
+     - Regla de Consistencia: El POS NO descuenta stock localmente en este momento.
+     - El campo nombre_cliente se graba con el valor por defecto "CONSUMIDOR FINAL" (o el texto tipeado manualmente si se identificó al comprador).
+     - Genera un JSON con la novedad del ticket firmado con el Timestamp corregido por el Delta Horario y lo envía por WebSocket al Gestor Cloud (o lo encola si está offline).
+  6. Actualización de Pantalla: El POS queda en espera reactiva. Cuando el Backoffice procesa el ticket y distribuye la novedad de stock resultante por el canal de la sucursal, la tabla productos_pos se actualiza en caliente y refresca los números en la interfaz de venta de manera inmediata.
+
+Caso de Uso: Cierre de Turno / Cierre de Día
+- Actor: Empleado / Cajero.
+- Flujo Principal:
+  1. El cajero selecciona "Cierre de Turno". El sistema muestra el balance esperado por medio de pago según los tickets locales.
+  2. El usuario cuenta el dinero físico e introduce el Monto de Efectivo Real que entrega.
+  3. Al confirmar, el sistema escanea la tabla historial_tickets_local:
+     - Escenario Todo Sincronizado: Si no quedan filas en "PENDIENTE", purga los tickets de la base local, guarda el log de cierre y cierra la sesión.
+     - Escenario Híbrido Offline: Si detecta filas en "PENDIENTE", bloquea su eliminación. Advierte en pantalla: "Turno cerrado. Quedan X tickets guardados localmente que se enviarán al volver el internet". La sesión se cierra de forma segura.
+
+--------------------------------------------------------------------------------
+MÓDULO: BACKOFFICE / OPERATIVO DE STOCK Y PRECIOS (100% ONLINE)
+--------------------------------------------------------------------------------
+
+Caso de Uso: Suscripción Inicial y Gestión de Pagos (Híbrido Stripe/PayPal)
+- Actor: Administrador / Dueño.
+- Flujo Principal:
+  1. El administrador ingresa a "Membresía" desde el Backoffice Web.
+  2. Selecciona el Plan y el ciclo de facturación.
+  3. El sistema despliega el Módulo de Facturación Aislado:
+     - Tarjeta (Vía Stripe): Formulario nativo seguro dentro de la app.
+     - PayPal: Ventana emergente externa para autorizar el acuerdo de facturación recurrente.
+  4. Al procesarse con éxito, la pasarela envía un Webhook al Gestor Cloud. El servidor en Go actualiza la tabla suscripciones (fecha_vencimiento_actual, fecha_limite_gracia) y muta el estado_cuenta a 'ACTIVO'. El Backoffice se desbloquea inmediatamente.
+
+Caso de Uso: Alta y Modificación (ABM) de Producto con Flexibilidad de Precio e Historial
+- Actor: Administrador / Dueño.
+- Precondiciones: Conexión obligatoria a internet. Sesión activa.
+- Flujo Principal:
+  1. El administrador abre el formulario de Alta o Edición de Producto. Si es alta, escanea el código (cámara o lector USB/Bluetooth) y autocompleta con el Catálogo EAN de la Nube si existe. Si es edición, carga los datos vigentes del artículo.
+  2. Carga de Costos y Precios: El usuario ingresa o modifica el Precio de Costo. El sistema permite completar o el Precio de Venta Neto o el Porcentaje de Ganancia, calculando el campo hermano de forma reactiva en pantalla.
+  3. Control de Visibilidad de Sucursales y Guardado:
+     - Si tiene una sola sucursal o mantiene tildado el check "Replicar este precio en todas las sucursales": Al presionar "Guardar", el sistema impacta el nuevo costo en la tabla productos, actualiza el precio_venta y porcentaje_ganancia en la tabla precios_sucursal para la sede/s correspondientes, y verifica si hubo cambios económicos.
+     - Si destilda el check de réplica: El sistema abre una sub-pantalla conteniendo la grilla de sucursales. El administrador modifica individualmente el precio o porcentaje por sede y confirma.
+  4. Regla de Log de Precios y Sincronización POS: Si el Costo base o el Precio de Venta de alguna sucursal mutaron respecto al valor anterior, el sistema genera una nueva fila en la tabla historial_precios_costos_local por cada sucursal afectada. Paralelamente, el sistema distribuye una novedad técnica (PRECIO_UPDATE) a través del bróker hacia las sucursales afectadas para que los dispositivos POS actualicen de forma inmediata los campos 'precio' en su tabla interna productos_pos.
+
+Caso de Uso: Procesamiento Central de Tickets del POS
+- Actor: Sistema (Backoffice Online).
+- Flujo Principal:
+  1. El Backoffice recibe el JSON del ticket enviado por un POS.
+  2. Verifica el id_ticket (Idempotencia). Si ya fue procesado antes, descarta el impacto físico y reenvía el ACK. Si es nuevo, lo guarda en el histórico.
+  3. Procesamiento de Stock: Toma los productos del ticket y ejecuta la resta matemática directa (Lógica Delta) sobre su tabla de stock_sucursal de la sede correspondiente. En caso de que el producto tuviera una promoción por volumen de unidades activa en la nube, reduce de manera atómica la cantidad restante de la oferta. Si el cupo llega a cero, finaliza la promoción.
+  4. Sincronización y Propagación: El sistema guarda el log en la auditoría y publica la novedad de actualización de stock resultante hacia el canal de la sucursal. Al recibir este mensaje, todos los dispositivos POS interceptan la ráfaga y actualizan de forma directa la columna 'stock' de su tabla local optimizada productos_pos, manteniendo sincronizada la pantalla del mostrador.
+  5. Envía un ACK de regreso al POS emisor para que mude el estado del ticket de "PENDIENTE" a "CONFIRMADO".
+
+Caso de Uso: Ajuste de Inventario por Ráfaga (Móvil y Web)
+- Actor: Administrador, Dueño o Encargado de Stock Autorizado (Rol: OPERADOR_STOCK).
+- Precondiciones: Conexión a la red. El usuario inicia el recuento en depósito o góndola.
+- Flujo Principal:
+  1. El operador ingresa a "Recuento / Inventario".
+  2. Inicialización de Captura Dual:
+     - En Móvil: Se activa la cámara en la mitad superior (escáner continuo) y botón de "Búsqueda Manual".
+     - En Web: El foco se ancla en el receptor para lectores Bluetooth/USB y expone barra de búsqueda de texto.
+  3. Identificación del Producto: El operador escanea el artículo, o si viene suelto, escribe en la barra de búsqueda y lo selecciona del modal de sugerencias rápidas.
+  4. En pantalla aparece la tarjeta del artículo con el input numérico enfocado automáticamente. El operador digita la cantidad física real contada (ej: 48) y presiona Enter.
+  5. Cálculo Delta Automático: El sistema toma el valor (48), lee el stock en línea (ej: 40), calcula la variación (+8) y despacha una Novedad Delta de SUMAR 8 unidades al canal de la sucursal, guardando la auditoría.
+  6. La pantalla limpia los campos y restablece la captura de inmediato. Al impactar en la nube, se distribuye la novedad de stock para actualizar la tabla productos_pos de las cajas.
+
+Caso de Uso: Ingreso de Mercadería por Ráfaga con Actualización de Costos y Precios
+- Actor: Administrador o Encargado de Stock (Rol: OPERADOR_STOCK).
+- Flujo Principal:
+  1. El usuario ingresa a "Ingresos / Recepción". El sistema inicia en modo de captura dual.
+  2. El operador identifica el producto entrante que le dejó el proveedor.
+  3. El sistema despliega la tarjeta del producto exponiendo tres campos editables: [Cantidad Entrante, Nuevo Costo, Nuevo Precio Venta]. Los campos vienen precargados con los valores actuales por defecto.
+  4. El operador digita la cantidad recibida. Si el proveedor modificó el costo de lista, el operador tipea el nuevo valor económico y actualiza el precio de venta en caliente si lo desea. Presiona Enter o "Siguiente".
+  5. Ejecución e Impacto de Datos:
+     - Genera una Novedad Delta de SUMAR la cantidad al inventario maestro stock_sucursal.
+     - Si los costos o precios variaron, reemplaza los valores en productos.costo y precios_sucursal.precio_venta.
+     - Inserta los logs correspondientes en las tablas de auditoria_stock_local e historial_precios_costos_local.
+  6. Propaga la actualización masiva de stock y precios por el canal WebSocket. Las terminales POS reciben la ráfaga e impactan los nuevos valores directamente sobre sus tablas locales optimizadas productos_pos de forma instantánea.
+
+Caso de Uso: Egreso de Mercadería Rápido (Móvil y Web)
+- Actor: Administrador o Encargado de Stock (Rol: OPERADOR_STOCK).
+- Flujo Principal:
+  1. El usuario ingresa a "Egresos / Roturas".
+  2. Identifica el artículo (escaneo o búsqueda manual).
+  3. El sistema abre el campo numérico donde digita la cantidad (ej: 2) y ofrece un selector de motivos (Rotura, Vencimiento, Pérdida).
+  4. Al presionar Enter o "Confirmar Egreso", el sistema despacha una Novedad Delta de RESTAR 2 unidades al canal operativo. Al impactar en el Backoffice, este emite la ráfaga de stock que pisa la columna 'stock' en la tabla productos_pos de las terminales de venta.
+
+Caso de Uso: Alta y Ciclo de Vida de Ofertas/Promociones
+- Actor: Administrador / Dueño o Encargado Comercial.
+- Precondiciones: Conexión online. Sesión activa en el Backoffice.
+- Flujo Principal:
+  1. El operador ingresa al módulo "Ofertas y Promociones" y presiona "Nueva Promoción".
+  2. Selección de Producto en Ráfaga: El sistema activa la captura dual. El operador identifica el artículo y la app levanta sus datos y precio normal vigente.
+  3. Parámetros de Oferta: El operador define: Precio Oferta, Alcance (Sucursal específica o réplica global), Fecha de Inicio y la Condición de Término (Por fecha límite o por cupo limitado de unidades en oferta).
+  4. El operador presiona "Confirmar Oferta". El sistema inserta el registro en la tabla promociones_local y lo transmite al Gestor Cloud (Go).
+  5. Flujo de Transmisión e Impacto en POS:
+     - Si la fecha de inicio es la actual, el estado pasa de inmediato a 'ACTIVA'. El servidor Go publica una novedad técnica de actualización de precio (PRECIO_UPDATE) con flag promocional hacia las sucursales involucradas.
+     - Al recibir este mensaje, las terminales POS modifican directamente la columna 'precio' de su tabla interna productos_pos y activan el flag visual de oferta en el mostrador.
+     - Si la oferta expira por tiempo o por cantidad (decrementado en la nube con cada venta), Go muta el estado a 'FINALIZADA' o 'AGOTADA', recupera el precio ordinario original y transmite una orden WebSocket para que los POS vuelvan a pisar el campo 'precio' de su tabla productos_pos con el valor normal instantáneamente.
+
+--------------------------------------------------------------------------------
+2. REGLAS DE ORO DE DESARROLLO (PREVENCION DE DEGRADACIÓN)
+--------------------------------------------------------------------------------
+
+- Responsabilidad Única (SRP): Las apps visuales (mobile-app y web-app) son capas puramente tontas de renderizado. No calculan inventarios, no gestionan strings de idiomas duros ni computan marcas de tiempo. Toda la lógica de negocio se consume desde el paquete unificado 'shared-logic'.
+- Estructura del POS Separada: La aplicación POS debe operar exclusivamente consultando la tabla optimizada 'productos_pos' y la tabla unificada de 'medios_pago' para garantizar respuestas en microsegundos en el mostrador. Queda prohibido hacer consultas pesadas o cruces relacionales con costos, proveedores o históricos desde la interfaz de venta rápida.
+- Desnormalización en Consultas Ráfaga: Las columnas 'marca' y 'categoria' se deben persistir como cadenas de texto plano (VARCHAR/TEXT) indexadas directamente tanto en la tabla maestra 'productos' como en la tabla operativa del mostrador 'productos_pos' para búsquedas de texto ráfaga bajo un único índice de texto rápido.
+- Sincronización Horaria (Time-Drift): Queda prohibido usar el reloj nativo del hardware del cliente para firmar transacciones. Al conectar el WebSocket, 'shared-logic' calcula el Delta Horario contra el Servidor de Go. Todo Timestamp saliente de tickets o movimientos se calcula como: Timestamp_Evento = Hora_Local_Actual + Delta_Horario.
+- Consistencia del POS: El POS actúa como emisor inmutable y NO realiza descuentos en su stock local al cerrar una venta. Genera la novedad del ticket con estado "PENDIENTE" y la despacha. El descuento matemático se aplica en caliente en el Backoffice Online y este propaga la actualización de stock resultante para pisar la tabla productos_pos de las cajas.
+- Operación en Ráfaga: Las interfaces de Ajuste, Ingreso, Egreso y Promociones operan en bucle continuo. Al escanear un código o confirmar selección manual, el input numérico toma foco automático (autoFocus). Al presionar Enter, se despacha la Novedad Delta y el foco regresa al escáner/buscador para el siguiente producto sin requerir clics del mouse.
+- Internacionalización (i18n): Prohibido escribir strings hardcodeados en los componentes visuales. Todo texto se consume desde claves estructuradas en archivos JSON ('locales/es.json'). Soportar sub-idiomas regionales (ej: 'locales/es/es-AR.json') para sobrescribir modismos del mostrador de forma automática.
+- Testing Automatizado Obligatorio: Cobertura mínima del 95% en el paquete 'shared-logic' utilizando Jest o Vitest. Es obligatorio incluir tests automatizados para: Handshake Time-Drift, Idempotencia del procesamiento de stock, Fallback de i18n y Bloqueo de Cierre de Caja ante tickets "PENDIENTES".

@@ -1,0 +1,169 @@
+--------------------------------------------------------------------------------
+3. DIAGRAMA ENTIDAD-RELACIÓN (DER) - LOCAL (DISPOSITIVO CLIENTE)
+--------------------------------------------------------------------------------
+
+1. Tabla: productos [Maestro de Producto para Backoffice y Depósito]
+   - id                      VARCHAR(36)    PRIMARY KEY  [UUID generado por Cliente]
+   - codigo_barras           VARCHAR(50)    INDEXED NULL [EAN o ID Autogenerado]
+   - nombre                  VARCHAR(255)   INDEXED
+   - marca                   VARCHAR(100)   INDEXED NULL [Texto Desnormalizado]
+   - categoria               VARCHAR(100)   INDEXED NULL [Texto Desnormalizado]
+   - descripcion             TEXT           NULL
+   - costo                   DECIMAL(12,4)  [Actualizado dinámicamente en ABM o Ingreso]
+   - ultima_actualizacion    BIGINT         [Timestamp unificado Delta Horario]
+
+2. Tabla: productos_pos [NUEVA TABLA OPTIMIZADA - Exclusiva para la operación del POS]
+--------------------------------------------------------------------------------
+   id                      VARCHAR(36)    PRIMARY KEY  [Mismo UUID que productos.id]
+   codigo_barras           VARCHAR(50)    INDEXED NULL
+   nombre                  VARCHAR(255)   INDEXED
+   marca                   VARCHAR(100)   INDEXED NULL
+   categoria               VARCHAR(100)   INDEXED NULL
+   precio                  DECIMAL(12,4)  [Pisa el valor normal con el de oferta si hay promo activa]
+   stock                   DECIMAL(12,4)  [Actualizado en caliente por novedades del Backoffice]
+   es_promocion            BOOLEAN        [Default: false - Alerta visual de oferta en caja]
+   ultima_actualizacion    BIGINT         [Timestamp unificado Delta Horario]
+
+3. Tabla: precios_sucursal [Control Administrativo de Márgenes]
+   - id                      VARCHAR(36)    PRIMARY KEY
+   - producto_id             VARCHAR(36)    INDEXED FK -> productos.id
+   - sucursal_id             VARCHAR(36)    INDEXED
+   - precio_venta            DECIMAL(12,4)  
+   - porcentaje_ganancia     DECIMAL(8,4)
+   - ultima_actualizacion    BIGINT
+
+4. Tabla: stock_sucursal [Inventario Maestro Centralizado]
+   - id                      VARCHAR(36)    PRIMARY KEY
+   - producto_id             VARCHAR(36)    INDEXED FK -> productos.id
+   - sucursal_id             VARCHAR(36)    INDEXED
+   - cantidad                DECIMAL(12,4)
+   - stock_minimo            DECIMAL(12,4)  [Default: 1.0000]
+   - ultima_actualizacion    BIGINT
+
+5. Tabla: medios_pago [Mapeado idéntico con el Backend para Cobros Coincidentes]
+   - id                      VARCHAR(36)    PRIMARY KEY
+   - comercio_id             VARCHAR(36)
+   - nombre                  VARCHAR(100)   [Ej: 'Efectivo', 'Mercado Pago QR']
+   - activo                  BOOLEAN        [Default: true]
+   - ultima_actualizacion    BIGINT
+
+6. Tabla: historial_tickets_local
+   - id                      VARCHAR(50)    PRIMARY KEY  [Ej: tkt_suc1_20260602_0001]
+   - sucursal_id             VARCHAR(36)    INDEXED
+   - dispositivo_emisor_id   VARCHAR(36)
+   - vendedor_nombre         VARCHAR(150)
+   - nombre_cliente          VARCHAR(150)   [Default: 'CONSUMIDOR FINAL']
+   - total_ticket            DECIMAL(12,4)
+   - estado_sincronizacion   VARCHAR(20)    [ENUM: 'PENDIENTE', 'CONFIRMADO']
+   - created_at              BIGINT         [Timestamp unificado Delta Horario]
+
+7. Tabla: ticket_detalles_local
+   - id                      VARCHAR(36)    PRIMARY KEY
+   - ticket_id               VARCHAR(50)    INDEXED FK -> historial_tickets_local.id ON DELETE CASCADE
+   - producto_id             VARCHAR(36)    FK -> productos.id [No restrictiva]
+   - nombre_producto_snapshot VARCHAR(255)  [Resguardo inmutable de texto]
+   - cantidad                DECIMAL(12,4)
+   - precio_unitario         DECIMAL(12,4)
+
+8. Tabla: ticket_pagos_local
+   - id                      VARCHAR(36)    PRIMARY KEY
+   - ticket_id               VARCHAR(50)    INDEXED FK -> historial_tickets_local.id ON DELETE CASCADE
+   - medio_pago_id           VARCHAR(36)    FK -> medios_pago.id
+   - monto_pagado            DECIMAL(12,4)
+   - monto_recibido          DECIMAL(12,4)
+   - vuelto                  DECIMAL(12,4)
+
+9. Tabla: auditoria_stock_local
+   - id                      VARCHAR(36)    PRIMARY KEY
+   - producto_id             VARCHAR(36)    INDEXED FK -> productos.id [No restrictiva]
+   - sucursal_id             VARCHAR(36)    INDEXED
+   - dispositivo_operador_id VARCHAR(36)
+   - rol_operador            VARCHAR(20)    [ENUM: 'ADMIN', 'OPERADOR_STOCK']
+   - concepto                VARCHAR(20)    [ENUM: 'VENTA_POS', 'INVENTARIO', 'INGRESO', 'EGRESO']
+   - cantidad_anterior       DECIMAL(12,4)
+   - variacion_delta         DECIMAL(12,4)  [El comando matemático neto: ej: +12, -2]
+   - cantidad_resultante     DECIMAL(12,4)
+   - motivo_descripcion      VARCHAR(255)   NULL [Obligatorio en Egresos]
+   - created_at              BIGINT         [Timestamp unificado Delta Horario]
+
+10. Tabla: historial_precios_costos_local
+   - id                      VARCHAR(36)    PRIMARY KEY  [UUID]
+   - producto_id             VARCHAR(36)    INDEXED FK -> productos.id [No restrictiva]
+   - sucursal_id             VARCHAR(36)    INDEXED      [A qué sucursal afecta la variación]
+   - dispositivo_operador_id VARCHAR(36)    [Quién ejecutó el cambio]
+   - origen_cambio           VARCHAR(20)    [ENUM: 'ABM_PRODUCTO', 'INGRESO_COMPRA']
+   - costo_anterior          DECIMAL(12,4)
+   - costo_nuevo             DECIMAL(12,4)
+   - precio_venta_anterior   DECIMAL(12,4)
+   - precio_venta_nuevo      DECIMAL(12,4)
+   - created_at              BIGINT         [Timestamp unificado Delta Horario]
+
+11. Tabla: promociones_local 
+   - id                      VARCHAR(36)    PRIMARY KEY  [UUID]
+   - producto_id             VARCHAR(36)    INDEXED FK -> productos.id ON DELETE CASCADE
+   - sucursal_id             VARCHAR(36)    INDEXED      
+   - precio_oferta           DECIMAL(12,4)
+   - fecha_inicio            BIGINT         [Timestamp de vigencia inicial]
+   - fecha_fin               BIGINT         [Timestamp de vigencia final - Nullable]
+   - limite_cantidad         DECIMAL(12,4)  [Cupo máximo - Nullable]
+   - cantidad_restante       DECIMAL(12,4)  [Saldo dinámico decrementado por tickets - Nullable]
+   - estado                  VARCHAR(20)    [ENUM: 'PROGRAMADA', 'ACTIVA', 'AGOTADA', 'FINALIZADA']
+   - ultima_actualizacion    BIGINT         [Timestamp unificado Delta Horario]
+
+--------------------------------------------------------------------------------
+4. DIAGRAMA ENTIDAD-RELACIÓN (DER) - GESTOR CLOUD (NUBE EN POSTGRESQL)
+--------------------------------------------------------------------------------
+
+1. Tabla: comercios
+   - id                      VARCHAR(36)    PRIMARY KEY  [UUID único del inquilino/tenant]
+   - nombre_empresa          VARCHAR(150)
+   - email_dueno             VARCHAR(150)   UNIQUE
+   - password_hash           VARCHAR(255)   [Para el acceso web del Administrador]
+   - estado_cuenta           VARCHAR(20)    [ENUM: 'ACTIVO', 'PERIODO_GRACIA', 'SUSPENDIDO']
+   - idioma_preferido        VARCHAR(10)    [Ej: 'es-AR', 'es', 'en']
+   - created_at              BIGINT
+
+2. Tabla: sucursales
+   - id                      VARCHAR(36)    PRIMARY KEY
+   - comercio_id             VARCHAR(36)    INDEXED FK -> comercios.id ON DELETE CASCADE
+   - nombre                  VARCHAR(100)   [Ej: 'Casa Central', 'Depósito Norte']
+   - direccion               VARCHAR(255)   NULL
+   - created_at              BIGINT
+
+3. Tabla: dispositivos_autorizados
+   - id                      VARCHAR(36)    PRIMARY KEY
+   - comercio_id             VARCHAR(36)    INDEXED FK -> comercios.id
+   - sucursal_id             VARCHAR(36)    INDEXED FK -> sucursales.id
+   - id_hardware_dispositivo VARCHAR(255)   UNIQUE [UUID físico capturado del terminal]
+   - alias_nombre            VARCHAR(100)   [Ej: 'Caja Principal', 'Celular Depósito']
+   - pin_acceso_hash         VARCHAR(255)   [PIN cifrado para el login veloz en mostrador]
+   - rol                     VARCHAR(20)    [ENUM: 'ADMIN', 'OPERADOR_STOCK', 'POS_CAJERO']
+   - estado_terminal         VARCHAR(20)    [ENUM: 'AUTORIZADO', 'BLOQUEADO_POR_PIN']
+   - token_enrolamiento      VARCHAR(100)   NULL [Token temporal inyectado en el QR]
+   - updated_at              BIGINT
+
+4. Tabla: suscripciones
+   - id                      VARCHAR(36)    PRIMARY KEY
+   - comercio_id             VARCHAR(36)    UNIQUE FK -> comercios.id ON DELETE CASCADE
+   - pasarela_nombre         VARCHAR(50)    [ENUM: 'STRIPE', 'PAYPAL', 'FREE_TRIAL']
+   - customer_id_externo     VARCHAR(150)   [Identificador de cliente en pasarela]
+   - subscription_id_externa VARCHAR(150)   [Identificador de suscripción en pasarela]
+   - plan_tipo               VARCHAR(50)    [Ej: 'PLAN_BASICO', 'PLAN_PRO']
+   - fecha_vencimiento_actual BIGINT         [Fin del periodo neto abonado]
+   - fecha_limite_gracia     BIGINT         [Timestamp de corte inmutable (Vencimiento + 5 días)]
+   - updated_at              BIGINT
+
+5. Tabla: catalogo_global_ean
+   - codigo_barras           VARCHAR(50)    PRIMARY KEY [EAN13 / GTIN]
+   - nombre                  VARCHAR(255)   INDEXED
+   - marca                   VARCHAR(100)   INDEXED NULL
+   - categoria               VARCHAR(100)   INDEXED NULL
+   - origen_dato             VARCHAR(50)    [ENUM: 'OPEN_FOOD_FACTS', 'CROWDSOURCING']
+
+--------------------------------------------------------------------------------
+5. INSTRUCCIONES ADICIONALES DE CONTROL DE FLUJO NUBE-CLIENTE
+--------------------------------------------------------------------------------
+- Filtro de Suscripción en Go: Al iniciar el servidor en Go, cuando un dispositivo intenta levantar una conexión de WebSockets, el backend debe validar mediante un JOIN entre [dispositivos_autorizados -> comercios -> suscripciones] el estado_cuenta. Si el resultado es 'SUSPENDIDO', se rechaza el handshake del Backoffice y se bloquea el canal de lectura del POS de forma silenciosa para forzar la acumulación offline de tickets en el cliente.
+- Idempotencia del Código QR: El endpoint de enrolamiento en Go consume el token_enrolamiento. Si coincide y la columna id_hardware_dispositivo está vacía, registra el identificador de hardware del cliente, limpia el token de enrolamiento (pasa a NULL) y entrega las credenciales de acceso. Cualquier intento posterior de reutilizar el mismo código QR debe ser rechazado.
+- Orquestación Central de Precios Promocionales: El motor central en Go es el único dueño del ciclo de vida lógico de las ofertas. Al alterarse atómicamente el remanente de una promoción por un ticket ingresado o al cumplirse el minuto de caducidad temporal, el backend en Go altera su PostgreSQL e inyecta la ráfaga de restauración del precio ordinario hacia los canales WebSocket de las sucursales involucradas. Los POS reciben el mensaje e impactan directamente la tabla 'productos_pos' para actualizar la interfaz de cobro al instante.
+================================================================================

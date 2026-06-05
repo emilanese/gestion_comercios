@@ -1,0 +1,34 @@
+{
+  "name": "@comercios/mobile-app",
+  "version": "0.1.0",
+  "description": "POS React Native Expo App - Móvil",
+  "main": "expo-router/entry",
+  "scripts": {
+    "dev": "expo start --dev-client",
+    "build": "expo build:android && expo build:ios",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src --ext .ts,.tsx"
+  },
+  "dependencies": {
+    "expo": "^50.0.0",
+    "expo-router": "^3.0.0",
+    "react": "^18.2.0",
+    "react-native": "^0.73.0",
+    "react-native-gesture-handler": "^2.14.0",
+    "expo-camera": "^14.0.0",
+    "expo-status-bar": "^1.11.0",
+    "@react-native-async-storage/async-storage": "^1.21.0",
+    "@react-native-community/netinfo": "^11.0.0",
+    "@comercios/shared-logic": "*",
+    "@comercios/ui-theme": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.2.37",
+    "@types/react-native": "^0.72.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.0.4"
+  }
+}

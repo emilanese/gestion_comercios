@@ -1,0 +1,12 @@
+{
+  "common": {
+    "change": "Cambio"
+  },
+  "pos": {
+    "change": "Cambio",
+    "warehouse": "Bodega"
+  },
+  "inventory": {
+    "warehouse": "Bodega"
+  }
+}

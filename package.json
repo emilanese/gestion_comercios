@@ -1,0 +1,23 @@
+{
+  "name": "mi-comercio-saas",
+  "version": "0.1.0",
+  "description": "SaaS Local-First para Gestión de Comercios Minoristas",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "backend-go"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "test:watch": "turbo run test:watch",
+    "lint": "turbo run lint",
+    "type-check": "turbo run type-check"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "typescript": "^5.3.3"
+  }
+}

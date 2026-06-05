@@ -1,0 +1,63 @@
+================================================================================
+BLUEPRINT ARQUITECTÓNICO: SAAS LOCAL-FIRST PARA GESTIÓN DE COMERCIOS
+================================================================================
+
+[1. ARQUITECTURA DE CÓDIGO Y ESTRUCTURA MONOREPO (TypeScript)]
+Utilizar un sistema de monorepo gestionado por Turborepo o Nx. El proyecto debe
+dividirse estrictamente de la siguiente manera:
+
+mi-comercio-saas/
+├── apps/
+│   ├── mobile-app/            # React Native + Expo (POS Táctil y App Depósito)
+│   └── web-app/               # React + Next.js (POS Escritorio y Backoffice Denso)
+├── packages/
+│   ├── shared-logic/          # NÚCLEO DE LA APP (WatermelonDB, Sync, i18n, WebSockets)
+│   └── ui-theme/              # Tokens de diseño y configuración base de Tailwind CSS
+
+[2. STACK TECNOLÓGICO OBLIGATORIO]
+- Backend Central (Gestor Cloud): Go (Golang) con alta concurrencia nativa.
+- Motor en Tiempo Real y Colas: Redis (Pub/Sub para ráfagas dinámicas).
+- Base de Datos de Nube: PostgreSQL (Estructura multi-tenant ultra ligera).
+- Base de Datos Local (Clientes): WatermelonDB (SQLite en nativo, IndexedDB en Web).
+- Estilos y Componentes: Tailwind CSS + Radix UI / Shadcn/ui.
+
+[3. REGLA TRANSVERSAL DE RED: HANDSHAKE TIME-DRIFT]
+Queda terminantemente prohibido usar la estampa de tiempo nativa del hardware del cliente
+para firmar eventos comerciales. Al conectar el WebSocket, la librería de packages/shared-logic 
+debe ejecutar un handshake síncrono enviando un ping y calculando:
+- Latencia = (Hora_Llegada_Cliente - Hora_Salida_Cliente) / 2
+- Delta Horario = Hora_Servidor_Go - (Hora_Salida_Cliente + Latencia)
+Todo Timestamp saliente de tickets o movimientos de stock debe inyectarse usando:
+Timestamp_Evento = Hora_Local_Actual + Delta_Horario.
+
+[4. DISEÑO DE MODELADO Y ATRIBUTOS DESNORMALIZADOS (Filtros Ráfaga)]
+Para garantizar velocidad extrema en queries locales y evitar JOINs costosos en los hilos del cliente:
+- Los atributos 'marca' y 'categoria' deben persistirse como cadenas de texto plano (VARCHAR/TEXT) indexadas directamente dentro de la tabla de 'productos'.
+- El motor de búsqueda local en WatermelonDB debe consultar de forma simultánea en las columnas [nombre, marca, categoria] bajo un único índice de texto rápido.
+
+[5. REGLAS DE CONSISTENCIA DE STOCK E IDEMPOTENCIA CENTRALIZADA]
+- El POS actúa como un emisor de tickets inmutable y NO realiza descuentos automáticos en su stock local al cerrar una venta. Genera la novedad del ticket con estado "PENDIENTE" y la despacha al canal de la sucursal. El descuento matemático se aplica en caliente en el Backoffice Online, el cual calcula el inventario neto resultante y propaga la orden de actualización de regreso a los POS.
+- Todo procesador de mensajes en el Backoffice y POS debe validar el 'id_ticket' o 'id_evento'. Si el registro ya fue procesado localmente, el mensaje duplicado debe ser descartado en milisegundos (Idempotencia), devolviendo únicamente el ACK técnico.
+
+[6. REGLAS DE UX E INTERFAZ PARA ALTA Y SUCURSALES]
+- Formulario de Precios: Al ingresar el costo, el usuario puede optar por digitar el precio de venta final o el porcentaje de utilidad. El frontend calculará el campo hermano de forma reactiva e instantánea.
+- Visibilidad Multi-sucursal: El check de "Replicar precio en todas las sucursales" solo se renderizará si el comercio posee más de una sucursal en PostgreSQL. Si el usuario destilda este check, la app web o móvil debe levantar obligatoriamente una nueva pantalla/ventana flotante conteniendo una grilla para la edición manual e individual del precio en cada sede.
+
+[7. DISEÑO DE OPERACIÓN EN RÁFAGA (Depósito y POS Web)]
+- Las interfaces de Ajuste, Ingreso y Egreso deben operar en modo de bucle continuo. Tras escanear un código (vía cámara en móvil o captura global por teclado de lectores Bluetooth/USB en web) o confirmar una selección del buscador manual de texto, el input numérico de cantidad debe tomar el foco de foco automático (autoFocus). Al presionar Enter, se despacha el cálculo matemático Delta resultante y el foco regresa al escáner/buscador, quedando listo para el siguiente producto sin clics de ratón intermedios.
+
+[8. EXTENSIBILIDAD DE ROLES DE USUARIO (Seguridad Capada)]
+La tabla 'dispositivos_autorizados' en PostgreSQL y el estado local de sesión deben incluir un campo ENUM 'rol' con los valores: ['ADMIN', 'OPERADOR_STOCK', 'POS_CAJERO'].
+- Si el dispositivo posee el rol 'OPERADOR_STOCK', el frontend (móvil o web) debe capar y ocultar físicamente los módulos de métricas de ganancias, reportes históricos financieros, altas de personal y gestión de suscripciones, exponiendo única y exclusivamente las herramientas en ráfaga de Ajuste, Ingreso y Egreso de inventario.
+
+[9. INTERNACIONALIZACIÓN ESTRICTA (i18n)]
+Queda estrictamente prohibido escribir cadenas de texto plano (Hardcoded Strings) en los componentes visuales de las carpetas de aplicaciones. Todo texto debe ser consumido utilizando claves estructuradas desde los diccionarios JSON en 'packages/shared-logic/src/locales/es.json'. Se configurará un sistema de fallback jerárquico que soporte sub-idiomas regionales (ej: locales/es/es-AR.json) para sobrescribir modismos del mostrador de forma automática según la telemetría regional del sistema operativo.
+
+[10. ESTRATEGIA DE TESTING AUTOMATIZADO MANDATORIO (CI)]
+Código que no cuente con su suite de pruebas unitarias automatizadas no pasará la integración. Se exige configurar Jest o Vitest en el paquete compartido para cubrir el 95% de la lógica inmutable.
+Se deben incluir de forma obligatoria tests automatizados para:
+- Cálculo correcto del Handshake Time-Drift bajo simulación de latencias variables.
+- Verificación del flujo de Idempotencia bloqueando la duplicación de procesamiento de stock ante ráfagas repetidas del mismo ticket.
+- Validación de Fallback de i18n ante códigos regionales incompletos.
+- Control del disparador de Cierre de Caja en el POS, garantizando que bloquee el borrado local de registros si estos mantienen el flag en estado "PENDIENTE".
+================================================================================

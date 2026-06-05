@@ -1,0 +1,77 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# AVANTI — .gitignore
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ─── Secrets y credenciales (NUNCA commitear) ─────────────────────────────────
+.env
+.env.local
+.env.production
+.env.*.local
+backend-go/.env
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+# Prevenir accidentes de contraseña como nombre de archivo
+*[Ee]zemil*
+*[Pp]assword*
+*[Ss]ecret*
+*[Tt]oken*
+*.pub
+id_rsa
+id_ed25519
+id_ecdsa
+*.ppk
+
+# ─── Node.js ──────────────────────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ─── Next.js ──────────────────────────────────────────────────────────────────
+apps/web-app/.next/
+apps/web-app/out/
+apps/web-app/build/
+
+# ─── Go ───────────────────────────────────────────────────────────────────────
+backend-go/main
+backend-go/*.exe
+backend-go/tmp/
+
+# ─── Docker ───────────────────────────────────────────────────────────────────
+# No ignorar docker-compose*.yml — son parte del proyecto
+
+# ─── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ─── OS ───────────────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ─── IDEs ─────────────────────────────────────────────────────────────────────
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+
+# ─── Expo / React Native ──────────────────────────────────────────────────────
+apps/mobile-app/.expo/
+apps/mobile-app/dist/
+apps/mobile-app/android/
+apps/mobile-app/ios/
+
+# ─── Misc ─────────────────────────────────────────────────────────────────────
+*.parquet
+.turbo/
+.cache/
+coverage/
+dist/

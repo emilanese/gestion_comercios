@@ -1,0 +1,5 @@
+# Force LF line endings for shell scripts (must run on Linux VPS)
+*.sh text eol=lf
+
+# Auto-detect everything else
+* text=auto

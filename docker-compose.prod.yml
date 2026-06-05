@@ -1,0 +1,54 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# AVANTI — Override de Producción VPS
+#
+# Uso:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Este override:
+#   1. Elimina los puertos directos de postgres y redis (solo red interna)
+#   2. Elimina el puerto directo del backend-go (solo accesible por nginx)
+#   3. Inyecta variables de producción reales
+#   4. Activa restart: always en todos los servicios
+# ─────────────────────────────────────────────────────────────────────────────
+
+version: '3.8'
+
+services:
+
+  nginx:
+    restart: always
+
+  landing:
+    restart: always
+
+  web-app:
+    environment:
+      NEXT_PUBLIC_API_URL: "https://api.avanti-retail.cloud"
+      NEXT_PUBLIC_WS_URL: "wss://api.avanti-retail.cloud/ws"
+    restart: always
+
+  backend-go:
+    # En producción: NO exponer el puerto 8080 al exterior.
+    # Solo Nginx puede acceder a él por la red interna de Docker.
+    ports: !reset []
+    environment:
+      DATABASE_URL: "postgres://comercios_user:${POSTGRES_PASSWORD}@postgres:5432/comercios_db?sslmode=disable"
+      REDIS_URL: "redis://redis:6379"
+      PORT: "8080"
+      JWT_SECRET: ${JWT_SECRET}
+    restart: always
+
+  postgres:
+    # En producción: sin puerto expuesto al exterior.
+    ports: !reset []
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    restart: always
+
+  redis:
+    # En producción: sin puerto expuesto al exterior.
+    ports: !reset []
+    restart: always
+
+  certbot:
+    restart: always

@@ -1,0 +1,132 @@
+{
+  "common": {
+    "app_name": "Mi Comercio SaaS",
+    "loading": "Cargando...",
+    "error": "Error",
+    "success": "Éxito",
+    "confirm": "Confirmar",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "add": "Agregar",
+    "back": "Atrás",
+    "next": "Siguiente"
+  },
+  "auth": {
+    "login": "Iniciar Sesión",
+    "pin": "PIN",
+    "device_enrollment": "Enrolamiento de Dispositivo",
+    "scan_qr": "Escanear Código QR",
+    "enter_token": "Ingresar Token",
+    "invalid_pin": "PIN Inválido",
+    "device_blocked": "Dispositivo Bloqueado"
+  },
+  "pos": {
+    "turn_open": "Abrir Turno",
+    "turn_close": "Cerrar Turno",
+    "initial_cash": "Monto Inicial de Caja",
+    "add_product": "Agregar Producto",
+    "scan_barcode": "Escanear Código de Barras",
+    "search_product": "Buscar Producto",
+    "quantity": "Cantidad",
+    "price": "Precio",
+    "total": "Total",
+    "payment_method": "Medio de Pago",
+    "cash": "Efectivo",
+    "card": "Tarjeta",
+    "mercado_pago": "Mercado Pago",
+    "change": "Vuelto",
+    "ticket_id": "Número de Ticket",
+    "seller": "Vendedor",
+    "customer_name": "Nombre del Cliente",
+    "finish_sale": "Finalizar Venta",
+    "balance_by_payment": "Balance por Medio de Pago",
+    "pending_tickets": "Tickets Pendientes",
+    "confirmed_tickets": "Tickets Confirmados"
+  },
+  "turn": {
+    "opening": "Apertura de Turno",
+    "initial_cash": "Monto Inicial de Caja",
+    "enter_initial_amount": "Ingresa el monto inicial de la caja",
+    "open_cash": "Abrir Caja",
+    "start_selling": "Comienza a vender",
+    "help_initial_amount": "Este monto es el cambio disponible al iniciar el turno"
+  },
+  "labels": {
+    "terminal": "Terminal",
+    "operator": "Operador",
+    "amount": "Monto"
+  },
+  "inventory": {
+    "stock_adjustment": "Ajuste de Inventario",
+    "receipt": "Recepción de Mercadería",
+    "disposal": "Egreso",
+    "count": "Recuento",
+    "stock_quantity": "Cantidad en Stock",
+    "counted_quantity": "Cantidad Contada",
+    "delta": "Variación",
+    "reason": "Motivo",
+    "breakage": "Rotura",
+    "expiration": "Vencimiento",
+    "loss": "Pérdida",
+    "cost": "Costo",
+    "sale_price": "Precio de Venta",
+    "margin": "Margen de Ganancia",
+    "cost_updated": "Costo Actualizado",
+    "stock_minimum": "Stock Mínimo"
+  },
+  "products": {
+    "product": "Producto",
+    "products": "Productos",
+    "name": "Nombre",
+    "barcode": "Código de Barras",
+    "brand": "Marca",
+    "category": "Categoría",
+    "description": "Descripción",
+    "add_product": "Agregar Producto",
+    "edit_product": "Editar Producto",
+    "replicate_all_branches": "Replicar a Todas las Sucursales",
+    "by_branch": "Por Sucursal",
+    "price_history": "Historial de Precios"
+  },
+  "branches": {
+    "branch": "Sucursal",
+    "branches": "Sucursales",
+    "central_office": "Casa Central",
+    "warehouse": "Depósito"
+  },
+  "promotions": {
+    "promotion": "Promoción",
+    "promotions": "Promociones",
+    "new_promotion": "Nueva Promoción",
+    "offer_price": "Precio de Oferta",
+    "start_date": "Fecha de Inicio",
+    "end_date": "Fecha de Fin",
+    "quantity_limit": "Límite de Cantidad",
+    "active": "Activa",
+    "scheduled": "Programada",
+    "exhausted": "Agotada",
+    "finished": "Finalizada",
+    "discount": "Descuento"
+  },
+  "backoffice": {
+    "dashboard": "Panel de Control",
+    "sales_today": "Ventas Hoy",
+    "critical_stock": "Stock Crítico",
+    "active_offers": "Ofertas Activas",
+    "subscription": "Suscripción",
+    "payment_method": "Método de Pago",
+    "configure": "Configurar"
+  },
+  "errors": {
+    "network_error": "Error de Conexión",
+    "offline_mode": "Modo Offline - Cambios se sincronizarán cuando haya conexión",
+    "invalid_data": "Datos Inválidos",
+    "invalid_amount": "Ingresa un monto válido",
+    "negative_amount": "El monto no puede ser negativo",
+    "turn_open_failed": "Error al abrir el turno",
+    "unauthorized": "No Autorizado",
+    "server_error": "Error del Servidor"
+  }
+}
