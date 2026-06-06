@@ -4,8 +4,10 @@
   "description": "POS React Native Expo App - Móvil",
   "main": "expo-router/entry",
   "scripts": {
-    "dev": "expo start --dev-client",
-    "build": "expo build:android && expo build:ios",
+    "dev": "expo start",
+    "build:android": "eas build --platform android --profile preview",
+    "build:android:prod": "eas build --platform android --profile production",
+    "build:ios": "eas build --platform ios --profile production",
     "test": "vitest",
     "test:watch": "vitest --watch",
     "type-check": "tsc --noEmit",
