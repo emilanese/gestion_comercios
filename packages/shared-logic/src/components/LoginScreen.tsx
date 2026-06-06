@@ -8,7 +8,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   loginWithPIN,
   checkPinAttempts,
-  loadCurrentSession,
   SessionConfig,
 } from '../logic/authentication';
 
@@ -40,6 +39,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const [attemptDetails, setAttemptDetails] = useState<{
     attemptsRemaining: number;
     isLocked: boolean;
+    lockedUntil?: number;
   } | null>(null);
 
   const pinInputRef = useRef<HTMLInputElement>(null);
