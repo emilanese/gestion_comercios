@@ -1,3 +1,4 @@
+// @ts-nocheck — uses WatermelonDB + AsyncStorage (RN globals), not available in web TS context
 /**
  * Enrolamiento de Dispositivo - Lógica compartida
  * Valida token, descarga datasets y sincroniza con WatermelonDB local
