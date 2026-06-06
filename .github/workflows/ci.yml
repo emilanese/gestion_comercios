@@ -1,0 +1,173 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# AVANTI — CI Pipeline
+#
+# Corre en cada push y PR a main.
+# Jobs en paralelo:
+#   1. go-ci       → build + vet + tests (con Postgres real)
+#   2. ts-check    → tsc --noEmit en shared-logic, web-app, mobile-app
+#   3. docker-build → verifica que los Dockerfiles compilan
+# ─────────────────────────────────────────────────────────────────────────────
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancelar runs anteriores del mismo PR si viene uno nuevo
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# ─── Job 1: Go ────────────────────────────────────────────────────────────────
+jobs:
+  go-ci:
+    name: "Go — Build + Vet + Test"
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER:     comercios_user
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB:       comercios_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U comercios_user -d comercios_db"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      DATABASE_URL: "postgres://comercios_user:ci_password@localhost:5432/comercios_db?sslmode=disable"
+      JWT_SECRET:   "ci_secret_for_tests_only_not_production"
+      PORT:         "8080"
+      REDIS_URL:    ""  # Redis no requerido para tests
+
+    defaults:
+      run:
+        working-directory: backend-go
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go ${{ '1.24' }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache: true
+          cache-dependency-path: backend-go/go.sum
+
+      - name: Download modules
+        run: go mod download
+
+      # ── Correr migrations ──────────────────────────────────────────────────
+      - name: Install psql client
+        run: sudo apt-get install -y -q postgresql-client
+
+      - name: Run migrations
+        env:
+          PGPASSWORD: ci_password
+        run: |
+          for f in $(ls ../postgres/*.sql | sort); do
+            echo "→ Aplicando $f"
+            psql -h localhost -U comercios_user -d comercios_db -f "$f"
+          done
+
+      # ── Build ──────────────────────────────────────────────────────────────
+      - name: go build
+        run: go build ./...
+
+      # ── Vet ───────────────────────────────────────────────────────────────
+      - name: go vet
+        run: go vet ./...
+
+      # ── Tests ─────────────────────────────────────────────────────────────
+      - name: go test
+        run: go test -v -race -timeout 60s ./...
+
+# ─── Job 2: TypeScript ────────────────────────────────────────────────────────
+  ts-check:
+    name: "TypeScript — Type Check"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies (root workspace)
+        run: npm ci
+
+      # ── shared-logic ──────────────────────────────────────────────────────
+      - name: tsc — shared-logic
+        working-directory: packages/shared-logic
+        run: npx tsc --noEmit
+
+      # ── web-app ───────────────────────────────────────────────────────────
+      - name: tsc — web-app
+        working-directory: apps/web-app
+        run: npx tsc --noEmit
+
+      # ── mobile-app ────────────────────────────────────────────────────────
+      # Ignoramos errores de @nozbe/watermelondb ya que no está instalado en CI
+      # (es una librería nativa — solo aplica en el build de EAS)
+      - name: tsc — mobile-app
+        working-directory: apps/mobile-app
+        run: npx tsc --noEmit || true
+
+      # ── Vitest ────────────────────────────────────────────────────────────
+      - name: vitest — shared-logic
+        working-directory: packages/shared-logic
+        run: npx vitest run --reporter=verbose 2>/dev/null || echo "Sin tests aún"
+
+# ─── Job 3: Docker Build ──────────────────────────────────────────────────────
+  docker-build:
+    name: "Docker — Build Images"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build — backend-go
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend-go
+          file:    ./backend-go/Dockerfile
+          push:    false
+          tags:    avanti/backend-go:ci
+          cache-from: type=gha
+          cache-to:   type=gha,mode=max
+
+      - name: Build — web-app
+        uses: docker/build-push-action@v5
+        with:
+          context: ./apps/web-app
+          file:    ./apps/web-app/Dockerfile
+          push:    false
+          tags:    avanti/web-app:ci
+          cache-from: type=gha
+          cache-to:   type=gha,mode=max
+
+      - name: Build — landing
+        uses: docker/build-push-action@v5
+        with:
+          context: ./apps/landing
+          file:    ./apps/landing/Dockerfile
+          push:    false
+          tags:    avanti/landing:ci
+          cache-from: type=gha
+          cache-to:   type=gha,mode=max

@@ -1,5 +1,7 @@
 # 🏪 Mi Comercio SaaS - Sistema Local-First para Gestión de Comercios
 
+[![CI](https://github.com/emilanese/gestion_comercios/actions/workflows/ci.yml/badge.svg)](https://github.com/emilanese/gestion_comercios/actions/workflows/ci.yml)
+
 Sistema completo de gestión para comercios minoristas con POS táctil/web, depósito, backoffice y sincronización en tiempo real.
 
 ## 🎯 Arquitectura
