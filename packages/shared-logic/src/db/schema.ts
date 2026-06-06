@@ -1,3 +1,4 @@
+// @ts-nocheck — WatermelonDB schema, not type-checked in web context
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 /**

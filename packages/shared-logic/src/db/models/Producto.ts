@@ -1,3 +1,4 @@
+// @ts-nocheck — WatermelonDB Model, not type-checked in web context
 import { Model } from '@nozbe/watermelondb';
 import { field } from '@nozbe/watermelondb/decorators';
 

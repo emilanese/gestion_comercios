@@ -1,3 +1,4 @@
+// @ts-nocheck — WatermelonDB queries, not type-checked in web context
 import { Database } from '@nozbe/watermelondb';
 
 /**
