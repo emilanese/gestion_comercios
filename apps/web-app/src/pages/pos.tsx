@@ -5,6 +5,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { NextPage } from 'next';
 import { useRouter } from 'next/router';
+import { t } from '@comercios/shared-logic';
 
 // ─── Tipos locales ─────────────────────────────────────────────────────────
 
@@ -28,12 +29,13 @@ interface CartItem {
 
 type PasoTicket = 'carrito' | 'pago' | 'confirmado';
 
+// Los nombres se resuelven en render desde el diccionario i18n
 const MEDIOS_PAGO = [
-  { id: 'efectivo',    nombre: 'Efectivo',     icono: '💵' },
-  { id: 'debito',      nombre: 'Débito',       icono: '💳' },
-  { id: 'credito',     nombre: 'Crédito',      icono: '💳' },
-  { id: 'transferencia', nombre: 'Transferencia', icono: '🏦' },
-  { id: 'qr',          nombre: 'QR / Alias',   icono: '📱' },
+  { id: 'efectivo',      key: 'pos.cash',     icono: '💵' },
+  { id: 'debito',        key: 'pos.debit',    icono: '💳' },
+  { id: 'credito',       key: 'pos.credit',   icono: '💳' },
+  { id: 'transferencia', key: 'pos.transfer', icono: '🏦' },
+  { id: 'qr',            key: 'pos.qr',       icono: '📱' },
 ];
 
 // ─── Componente ──────────────────────────────────────────────────────────────
@@ -158,13 +160,13 @@ const POS: NextPage = () => {
     <div className="min-h-screen bg-slate-100 flex flex-col">
       {/* Header */}
       <header className="bg-blue-700 text-white px-4 py-3 flex items-center justify-between shadow">
-        <h1 className="text-xl font-bold">🏪 POS Terminal</h1>
+        <h1 className="text-xl font-bold">{t('pos.title')} Terminal</h1>
         <div className="flex items-center gap-3">
           <span className={`text-xs px-2 py-1 rounded-full font-medium ${wsStatus === 'online' ? 'bg-green-500' : 'bg-red-400'}`}>
-            {wsStatus === 'online' ? '● En línea' : '○ Sin conexión'}
+            {wsStatus === 'online' ? t('common.online') : t('common.offline')}
           </span>
           <button onClick={() => router.push('/backoffice')} className="text-sm underline">
-            Backoffice
+            {t('backoffice.dashboard')}
           </button>
         </div>
       </header>
@@ -176,12 +178,12 @@ const POS: NextPage = () => {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="🔍 Buscar por nombre, marca o EAN..."
+            placeholder={t('pos.search_placeholder')}
             className="w-full px-4 py-3 border border-slate-300 rounded-xl text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             autoFocus
           />
 
-          {buscando && <p className="text-slate-400 text-center">Buscando...</p>}
+          {buscando && <p className="text-slate-400 text-center">{t('common.searching')}</p>}
 
           <div className="flex-1 overflow-y-auto space-y-2">
             {productos.map((p) => (
@@ -209,7 +211,7 @@ const POS: NextPage = () => {
                     ) : (
                       <p className="font-bold text-slate-800">${p.precioVenta.toFixed(2)}</p>
                     )}
-                    <p className="text-xs text-slate-400">Stock: {p.stock}</p>
+                     <p className="text-xs text-slate-400">{t('pos.stock_label', { count: p.stock })}</p>
                   </div>
                 </div>
               </button>
@@ -221,10 +223,10 @@ const POS: NextPage = () => {
         <div className="w-1/2 flex flex-col p-4">
           {paso === 'carrito' && (
             <>
-              <h2 className="text-lg font-semibold text-slate-700 mb-3">🛒 Carrito</h2>
+              <h2 className="text-lg font-semibold text-slate-700 mb-3">🛒 {t('pos.payment_method', 'Carrito')}</h2>
               <div className="flex-1 overflow-y-auto space-y-2">
                 {carrito.length === 0 && (
-                  <p className="text-slate-400 text-center mt-8">Agregá productos desde la búsqueda</p>
+                  <p className="text-slate-400 text-center mt-8">{t('pos.cart_empty')}</p>
                 )}
                 {carrito.map((item, idx) => (
                   <div key={item.producto.productoID} className="bg-white rounded-xl p-3 flex items-center gap-3 border border-slate-200">
@@ -243,25 +245,25 @@ const POS: NextPage = () => {
               </div>
 
               <div className="border-t border-slate-200 pt-3 mt-3">
-                <div className="flex justify-between text-xl font-bold text-slate-800 mb-4">
-                  <span>Total</span>
+                  <div className="flex justify-between text-xl font-bold text-slate-800 mb-4">
+                    <span>{t('pos.total')}</span>
                   <span>${totalCarrito.toFixed(2)}</span>
                 </div>
-                <button
-                  onClick={() => setPaso('pago')}
-                  disabled={carrito.length === 0}
-                  className="w-full bg-green-600 hover:bg-green-700 disabled:bg-slate-300 text-white font-bold py-3 rounded-xl text-lg transition"
-                >
-                  Cobrar →
-                </button>
+                  <button
+                    onClick={() => setPaso('pago')}
+                    disabled={carrito.length === 0}
+                    className="w-full bg-green-600 hover:bg-green-700 disabled:bg-slate-300 text-white font-bold py-3 rounded-xl text-lg transition"
+                  >
+                    {t('pos.checkout')}
+                  </button>
               </div>
             </>
           )}
 
           {paso === 'pago' && (
             <>
-              <h2 className="text-lg font-semibold text-slate-700 mb-3">💳 Pago</h2>
-              <p className="text-3xl font-bold text-slate-800 mb-4">Total: ${totalCarrito.toFixed(2)}</p>
+              <h2 className="text-lg font-semibold text-slate-700 mb-3">💳 {t('pos.payment_method')}</h2>
+              <p className="text-3xl font-bold text-slate-800 mb-4">{t('pos.total')} ${totalCarrito.toFixed(2)}</p>
 
               <div className="grid grid-cols-2 gap-2 mb-4">
                 {MEDIOS_PAGO.map((mp) => (
@@ -271,14 +273,14 @@ const POS: NextPage = () => {
                     className={`p-3 rounded-xl border-2 text-left transition ${medioPago === mp.id ? 'border-blue-500 bg-blue-50' : 'border-slate-200 bg-white'}`}
                   >
                     <span className="text-xl">{mp.icono}</span>
-                    <p className="text-sm font-medium mt-1">{mp.nombre}</p>
+                    <p className="text-sm font-medium mt-1">{t(mp.key)}</p>
                   </button>
                 ))}
               </div>
 
               {medioPago === 'efectivo' && (
                 <div className="mb-4">
-                  <label className="text-sm text-slate-600 mb-1 block">Monto entregado</label>
+                  <label className="text-sm text-slate-600 mb-1 block">{t('pos.amount_tendered')}</label>
                   <input
                     type="number"
                     value={montoEntregado}
@@ -287,21 +289,21 @@ const POS: NextPage = () => {
                     placeholder="0.00"
                   />
                   {Number(montoEntregado) >= totalCarrito && (
-                    <p className="text-green-600 font-bold mt-2">Vuelto: ${vuelto.toFixed(2)}</p>
+                    <p className="text-green-600 font-bold mt-2">{t('pos.change_label', { amount: vuelto.toFixed(2) })}</p>
                   )}
                 </div>
               )}
 
               <div className="flex gap-3 mt-auto">
                 <button onClick={() => setPaso('carrito')} className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-3 rounded-xl transition">
-                  ← Volver
+                  {t('pos.back_to_sale')}
                 </button>
                 <button
                   onClick={confirmarPago}
                   disabled={medioPago === 'efectivo' && Number(montoEntregado) < totalCarrito}
                   className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-slate-300 text-white font-bold py-3 rounded-xl transition"
                 >
-                  Confirmar ✓
+                  {t('pos.confirm_sale')}
                 </button>
               </div>
             </>
@@ -310,17 +312,17 @@ const POS: NextPage = () => {
           {paso === 'confirmado' && (
             <div className="flex flex-col items-center justify-center flex-1 gap-4">
               <div className="text-6xl">✅</div>
-              <h2 className="text-2xl font-bold text-green-700">¡Venta confirmada!</h2>
-              <p className="text-slate-500">Ticket: <span className="font-mono font-bold">{ticketID}</span></p>
+              <h2 className="text-2xl font-bold text-green-700">{t('pos.sale_confirmed')}</h2>
+              <p className="text-slate-500">{t('common.ticket_label')} <span className="font-mono font-bold">{ticketID}</span></p>
               <p className="text-3xl font-bold text-slate-800">${totalCarrito.toFixed(2)}</p>
               {medioPago === 'efectivo' && vuelto > 0 && (
-                <p className="text-xl text-green-600 font-semibold">Vuelto: ${vuelto.toFixed(2)}</p>
+                <p className="text-xl text-green-600 font-semibold">{t('pos.change_label', { amount: vuelto.toFixed(2) })}</p>
               )}
               <button
                 onClick={nuevaVenta}
                 className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl text-lg"
               >
-                Nueva Venta
+                {t('pos.new_sale')}
               </button>
             </div>
           )}

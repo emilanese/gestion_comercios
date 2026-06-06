@@ -2,7 +2,7 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "outDir": "./.next",
-    "rootDir": "./src",
+    "rootDir": "../../",
     "jsx": "preserve",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "noEmit": true,

@@ -221,12 +221,34 @@
 
   "backoffice": {
     "dashboard": "Panel de Control",
+    "subtitle": "Panel de gestión",
     "sales_today": "Ventas Hoy",
+    "tickets_today": "Tickets Hoy",
+    "open_turns": "Turnos Abiertos",
     "critical_stock": "Stock Crítico",
     "active_offers": "Ofertas Activas",
+    "quick_access": "Accesos rápidos",
     "subscription": "Suscripción",
     "payment_method": "Método de Pago",
-    "configure": "Configurar"
+    "configure": "Configurar",
+    "nav_pos":        "🏪 POS Terminal",
+    "nav_products":   "📦 Productos",
+    "nav_promotions": "🏷 Promociones",
+    "nav_turns":      "🔓 Turnos",
+    "nav_reports":    "📊 Reportes",
+    "nav_devices":    "📱 Dispositivos",
+    "sc_pos":              "Abrir POS",
+    "sc_pos_desc":         "Ir al terminal de ventas",
+    "sc_products":         "Gestionar Productos",
+    "sc_products_desc":    "Precios, stock, catálogo",
+    "sc_promotions":       "Crear Promoción",
+    "sc_promotions_desc":  "Descuentos y ofertas",
+    "sc_turns":            "Ver Turnos",
+    "sc_turns_desc":       "Apertura y cierre de caja",
+    "sc_reports":          "Ver Reportes",
+    "sc_reports_desc":     "Ventas, stock, métricas",
+    "sc_devices":          "Dispositivos",
+    "sc_devices_desc":     "Gestionar dispositivos POS"
   },
 
   "errors": {
