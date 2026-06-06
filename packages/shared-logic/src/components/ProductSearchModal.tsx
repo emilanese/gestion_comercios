@@ -7,9 +7,7 @@ import {
   FlatList,
   Modal,
   ActivityIndicator,
-  Platform,
   StyleSheet,
-  Dimensions,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 

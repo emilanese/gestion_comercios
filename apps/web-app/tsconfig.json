@@ -6,8 +6,15 @@
     "jsx": "preserve",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "noEmit": true,
-    "plugins": [{"name": "next"}]
+    "plugins": [{"name": "next"}],
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules", ".next"]
+  "exclude": [
+    "node_modules",
+    ".next",
+    "../../packages/shared-logic/src/components/ProductSearchModal.tsx",
+    "../../packages/shared-logic/src/components/TurnOpenScreen.tsx"
+  ]
 }

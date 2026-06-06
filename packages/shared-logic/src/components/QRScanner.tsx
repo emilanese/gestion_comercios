@@ -3,7 +3,7 @@
  * Works on both Mobile (React Native) and Web
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 
 export interface QRScannerProps {
   onQRScanned: (data: string) => void;
