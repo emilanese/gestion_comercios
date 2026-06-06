@@ -1,46 +1,91 @@
 /**
- * WatermelonDB Model classes — re-exports para uso en la app
+ * Tipos de dominio complementarios para los modelos de datos locales.
  *
- * Registro de uso en la instancia Database:
- *   import { modelClasses } from '@shared-logic/db/models';
- *   const database = new Database({ schema, modelClasses });
+ * NOTA: ProductoRecord, PrecioSucursalRecord, StockSucursalRecord y
+ * MedioPagoRecord ya están definidos en ./db/schema — no se reexportan aquí.
+ * Este archivo solo agrega los tipos de Ticket, Auditoría e Historial de precios.
  */
 
-export { Producto } from './Producto';
-export { ProductoPOS } from './ProductoPOS';
-export { PrecioSucursal } from './PrecioSucursal';
-export { StockSucursal } from './StockSucursal';
-export { MedioPago } from './MedioPago';
-export { HistorialTicketLocal } from './HistorialTicketLocal';
-export { TicketDetalleLocal } from './TicketDetalleLocal';
-export { TicketPagoLocal } from './TicketPagoLocal';
-export { AuditoriaStockLocal } from './AuditoriaStockLocal';
-export { HistorialPreciosCostosLocal } from './HistorialPreciosCostosLocal';
-export { PromocionLocal } from './PromocionLocal';
+// ─── Estados ──────────────────────────────────────────────────────────────────
 
-import { Producto } from './Producto';
-import { ProductoPOS } from './ProductoPOS';
-import { PrecioSucursal } from './PrecioSucursal';
-import { StockSucursal } from './StockSucursal';
-import { MedioPago } from './MedioPago';
-import { HistorialTicketLocal } from './HistorialTicketLocal';
-import { TicketDetalleLocal } from './TicketDetalleLocal';
-import { TicketPagoLocal } from './TicketPagoLocal';
-import { AuditoriaStockLocal } from './AuditoriaStockLocal';
-import { HistorialPreciosCostosLocal } from './HistorialPreciosCostosLocal';
-import { PromocionLocal } from './PromocionLocal';
+export type TicketEstadoLocal = 'PENDIENTE' | 'CONFIRMADO' | 'ANULADO';
 
-/** Array de Model classes para pasar a `new Database({ schema, modelClasses })` */
-export const modelClasses = [
-  Producto,
-  ProductoPOS,
-  PrecioSucursal,
-  StockSucursal,
-  MedioPago,
-  HistorialTicketLocal,
-  TicketDetalleLocal,
-  TicketPagoLocal,
-  AuditoriaStockLocal,
-  HistorialPreciosCostosLocal,
-  PromocionLocal,
-];
+export type TipoPromocionLocal =
+  | 'DESCUENTO_PORCENTAJE'
+  | 'PRECIO_FIJO'
+  | '2x1'
+  | '3x2'
+  | 'COMBO';
+
+export type TipoMovimientoStock =
+  | 'INGRESO'
+  | 'EGRESO'
+  | 'AJUSTE'
+  | 'VENTA'
+  | 'ANULACION';
+
+// ─── Historial de tickets ─────────────────────────────────────────────────────
+
+export interface HistorialTicketRecord {
+  id: string;
+  turnoId: string;
+  sucursalId: string;
+  comercioId: string;
+  numero: number;
+  total: number;
+  totalDescuento: number;
+  estado: TicketEstadoLocal;
+  createdAt: number;  // ms epoch
+  confirmedAt: number;
+}
+
+export interface TicketDetalleRecord {
+  id: string;
+  ticketId: string;
+  productoId: string;
+  nombreProducto: string;
+  ean: string;
+  cantidad: number;
+  precioUnitario: number;
+  precioFinal: number;
+  descuento: number;
+  promocionId: string;
+}
+
+export interface TicketPagoRecord {
+  id: string;
+  ticketId: string;
+  tipoPago: string;
+  monto: number;
+}
+
+// ─── Auditoría de stock ───────────────────────────────────────────────────────
+
+export interface AuditoriaStockRecord {
+  id: string;
+  productoId: string;
+  sucursalId: string;
+  comercioId: string;
+  tipo: TipoMovimientoStock;
+  cantidadDelta: number;
+  stockAntes: number;
+  stockDespues: number;
+  ticketId: string;
+  operadorNombre: string;
+  motivo: string;
+  createdAt: number;
+}
+
+// ─── Historial de precios / costos ────────────────────────────────────────────
+
+export interface HistorialPrecioCostoRecord {
+  id: string;
+  productoId: string;
+  sucursalId: string;
+  precioVentaAnterior: number;
+  precioVentaNuevo: number;
+  precioCostoAnterior: number;
+  precioCostoNuevo: number;
+  changedBy: string;
+  createdAt: number;
+}

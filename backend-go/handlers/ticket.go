@@ -136,9 +136,8 @@ func (h *Handler) ConfirmTicketHandler(w http.ResponseWriter, r *http.Request) {
 		// Descontar stock si hay productoID y sucursalID
 		if item.ProductoID != "" {
 			_, _ = tx.Exec(`
-				UPDATE inventario_sucursal
-				SET stock_actual = GREATEST(stock_actual - $1, 0),
-				    version = version + 1,
+				UPDATE stock_sucursal
+				SET cantidad   = GREATEST(cantidad - $1, 0),
 				    updated_at = $2
 				WHERE producto_id = $3 AND sucursal_id = $4
 			`, item.Cantidad, now, item.ProductoID, sucursalID)

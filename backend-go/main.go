@@ -59,7 +59,7 @@ func NewServer() *Server {
 		log.Printf("[Server] ⚠️  BD no disponible: %v — continuando en modo degradado", err)
 	}
 
-	// Inicializar Redis (opcional — si no está disponible, el sistema funciona en modo degradado)
+	// Inicializar Redis (opcional)
 	var rdb *redis.Client
 	if redisURL := os.Getenv("REDIS_URL"); redisURL != "" {
 		opt, err := redis.ParseURL(redisURL)
@@ -94,8 +94,6 @@ func NewServer() *Server {
 
 // ─── Middleware JWT ───────────────────────────────────────────────────────────
 
-// jwtMiddleware valida el header Authorization: Bearer <token>.
-// Inyecta los claims en el contexto de la petición via X-Claims-* headers.
 func (s *Server) jwtMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
@@ -113,13 +111,23 @@ func (s *Server) jwtMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		// Inyectar claims como headers internos para los handlers
 		r.Header.Set("X-Comercio-ID", claims.ComercioID)
 		r.Header.Set("X-Sucursal-ID", claims.SucursalID)
 		r.Header.Set("X-Device-ID", claims.DeviceID)
 		r.Header.Set("X-Rol", claims.Rol)
 
 		next(w, r)
+	}
+}
+
+// ─── Dispatchers de nivel Server ─────────────────────────────────────────────
+
+// productsHandler despacha GET (listar) o POST (crear) en /products
+func (s *Server) productsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		s.handler.CreateProductHandler(w, r)
+	} else {
+		s.handler.GetProductsHandler(w, r)
 	}
 }
 
@@ -135,16 +143,19 @@ func (s *Server) Run() {
 	mux := http.NewServeMux()
 
 	// ── Públicas ──────────────────────────────────────────────────────────
-	mux.HandleFunc("/health", s.healthHandler)
+	mux.HandleFunc("/health",    s.healthHandler)
 	mux.HandleFunc("/sync/ping", s.syncPingHandler)
 
 	// ── Auth ─────────────────────────────────────────────────────────────
-	mux.HandleFunc("/auth/register", s.authRegisterHandler)
-	mux.HandleFunc("/auth/login", s.authLoginHandler)
+	mux.HandleFunc("/auth/register",     s.authRegisterHandler)
+	mux.HandleFunc("/auth/login",        s.authLoginHandler)
 	mux.HandleFunc("/auth/validate-pin", s.handler.ValidatePINHandler)
 
 	// ── Enrolamiento ──────────────────────────────────────────────────────
 	mux.HandleFunc("/devices/enroll", s.handler.DeviceEnrollHandler)
+
+	// ── Generación de código (requiere JWT) ────────────────────────────────
+	mux.HandleFunc("/devices/generate-code", s.jwtMiddleware(s.handler.GenerateEnrollCodeHandler))
 
 	// ── Administración (requiere JWT) ─────────────────────────────────────
 	mux.HandleFunc("/admin/unblock-device", s.jwtMiddleware(s.handler.RemoteUnblockDeviceHandler))
@@ -158,14 +169,26 @@ func (s *Server) Run() {
 	mux.HandleFunc("/tickets/confirm", s.jwtMiddleware(s.handler.ConfirmTicketHandler))
 	mux.HandleFunc("/tickets",         s.jwtMiddleware(s.handler.GetTicketsHandler))
 
-	// ── Productos (requiere JWT) ───────────────────────────────────────────
-	mux.HandleFunc("/products", s.jwtMiddleware(handlers.GetProductsHandler))
-	mux.HandleFunc("/products/search", s.jwtMiddleware(handlers.SearchProductsHandler))
-	mux.HandleFunc("/products/by-barcode", s.jwtMiddleware(handlers.SearchProductByBarcodeHandler))
+	// ── Productos (requiere JWT) ──────────────────────────────────────────
+	// Las rutas más específicas deben registrarse ANTES que el subtree /products/
+	mux.HandleFunc("/products/search",     s.jwtMiddleware(s.handler.SearchProductsHandler))
+	mux.HandleFunc("/products/by-barcode", s.jwtMiddleware(s.handler.SearchProductByBarcodeHandler))
+	mux.HandleFunc("/products/",           s.jwtMiddleware(s.handler.ProductRouterHandler))  // PUT/DELETE /:id
+	mux.HandleFunc("/products",            s.jwtMiddleware(s.productsHandler))               // GET list / POST create
 
 	// ── Promociones (requiere JWT) ────────────────────────────────────────
-	mux.HandleFunc("/promotions/active", s.jwtMiddleware(s.handler.GetActivePromotionsHandler))
+	mux.HandleFunc("/promotions/active",   s.jwtMiddleware(s.handler.GetActivePromotionsHandler))
 	mux.HandleFunc("/promotions/evaluate", s.jwtMiddleware(s.handler.EvaluatePromotionsHandler))
+	mux.HandleFunc("/promotions/",         s.jwtMiddleware(s.handler.PromotionRouterHandler)) // PUT/DELETE /:id
+	mux.HandleFunc("/promotions",          s.jwtMiddleware(s.handler.CreatePromotionHandler)) // POST create
+
+	// ── Reportes (requiere JWT) ───────────────────────────────────────────
+	mux.HandleFunc("/reports/daily",         s.jwtMiddleware(s.handler.DailyReportHandler))
+	mux.HandleFunc("/reports/medios-pago",   s.jwtMiddleware(s.handler.MediosPagoReportHandler))
+	mux.HandleFunc("/reports/stock-critico", s.jwtMiddleware(s.handler.StockCriticoHandler))
+
+	// ── Dispositivos (requiere JWT) ───────────────────────────────────────
+	mux.HandleFunc("/devices", s.jwtMiddleware(s.handler.GetDevicesHandler))
 
 	// ── WebSocket ─────────────────────────────────────────────────────────
 	mux.HandleFunc("/ws", s.wsHandler)
@@ -176,7 +199,7 @@ func (s *Server) Run() {
 	}
 }
 
-// ─── Handlers ─────────────────────────────────────────────────────────────────
+// ─── Handlers estáticos ───────────────────────────────────────────────────────
 
 func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
@@ -189,8 +212,6 @@ func (s *Server) syncPingHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // authRegisterHandler — POST /auth/register
-// Crea un nuevo comercio (primer usuario del SaaS).
-// Solo funciona si el email no existe. No requiere JWT.
 func (s *Server) authRegisterHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -199,9 +220,9 @@ func (s *Server) authRegisterHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	var req struct {
-		Email          string `json:"email"`
-		Password       string `json:"password"`
-		NombreEmpresa  string `json:"nombre_empresa"`
+		Email         string `json:"email"`
+		Password      string `json:"password"`
+		NombreEmpresa string `json:"nombre_empresa"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -219,7 +240,6 @@ func (s *Server) authRegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verificar si el email ya existe
 	var count int
 	_ = s.db.QueryRow(`SELECT COUNT(*) FROM comercios WHERE email_dueno = $1`, req.Email).Scan(&count)
 	if count > 0 {
@@ -228,11 +248,9 @@ func (s *Server) authRegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Generar ID y hash de contraseña
-	comercioID := fmt.Sprintf("%d", time.Now().UnixNano()) // ID simple para dev
+	comercioID := fmt.Sprintf("%d", time.Now().UnixNano())
 	passwordHash := models.GeneratePINHash(req.Password)
 
-	// Insertar comercio
 	_, err := s.db.Exec(
 		`INSERT INTO comercios (id, nombre_empresa, email_dueno, password_hash, estado_cuenta)
 		 VALUES ($1, $2, $3, $4, 'ACTIVO')`,
@@ -245,7 +263,6 @@ func (s *Server) authRegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Crear sucursal principal automáticamente
 	sucursalID := fmt.Sprintf("%d", time.Now().UnixNano()+1)
 	_, _ = s.db.Exec(
 		`INSERT INTO sucursales (id, comercio_id, nombre, direccion)
@@ -253,7 +270,6 @@ func (s *Server) authRegisterHandler(w http.ResponseWriter, r *http.Request) {
 		sucursalID, comercioID, "Sucursal Principal", "Sin dirección",
 	)
 
-	// Emitir JWT de sesión
 	token, err := handlers.GenerateToken(comercioID, sucursalID, "", "GESTOR", s.config.JWTSecret)
 	if err != nil {
 		log.Printf("[Register] Error generando token: %v", err)
@@ -262,31 +278,29 @@ func (s *Server) authRegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("[Register] ✅ Nuevo comercio registrado: %s (%s)", req.NombreEmpresa, req.Email)
+	log.Printf("[Register] ✅ Nuevo comercio: %s (%s)", req.NombreEmpresa, req.Email)
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"success":      true,
-		"comercio_id":  comercioID,
-		"sucursal_id":  sucursalID,
-		"token":        token,
-		"rol":          "GESTOR",
-		"message":      "Comercio registrado exitosamente",
+		"success":     true,
+		"comercio_id": comercioID,
+		"sucursal_id": sucursalID,
+		"token":       token,
+		"rol":         "GESTOR",
+		"message":     "Comercio registrado exitosamente",
 	})
 }
 
 // authLoginHandler — POST /auth/login
-// Valida email + password_hash del gestor/admin desde la tabla comercios.
 func (s *Server) authLoginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
 	w.Header().Set("Content-Type", "application/json")
 
 	var req struct {
-		Email     string `json:"email"`
-		Password  string `json:"password"`
+		Email      string `json:"email"`
+		Password   string `json:"password"`
 		SucursalID string `json:"sucursal_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -300,7 +314,6 @@ func (s *Server) authLoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Consultar comercio por email
 	var comercioID, passwordHash string
 	err := s.db.QueryRow(
 		`SELECT id, password_hash FROM comercios WHERE email_dueno = $1 AND estado_cuenta = 'ACTIVO'`,
@@ -319,17 +332,18 @@ func (s *Server) authLoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validar contraseña (SHA-256 hex — consistente con handlers/auth.go y models/hash.go)
 	if models.GeneratePINHash(req.Password) != passwordHash {
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(map[string]string{"error": "Credenciales inválidas"})
 		return
 	}
 
-	// Emitir JWT
+	// Si no mandan sucursal_id, buscar la primera del comercio
 	sucursalID := req.SucursalID
 	if sucursalID == "" {
-		sucursalID = "" // el gestor puede no tener sucursal específica
+		_ = s.db.QueryRow(
+			`SELECT id FROM sucursales WHERE comercio_id = $1 LIMIT 1`, comercioID,
+		).Scan(&sucursalID)
 	}
 
 	token, err := handlers.GenerateToken(comercioID, sucursalID, "", "GESTOR", s.config.JWTSecret)
@@ -340,11 +354,12 @@ func (s *Server) authLoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("[Login] ✅ Login exitoso — comercio: %s", comercioID)
+	log.Printf("[Login] ✅ Login exitoso — comercio: %s sucursal: %s", comercioID, sucursalID)
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"success":     true,
 		"token":       token,
 		"comercio_id": comercioID,
+		"sucursal_id": sucursalID,
 		"rol":         "GESTOR",
 	})
 }
@@ -359,13 +374,9 @@ var wsUpgrader = websocket.Upgrader{
 	},
 }
 
-// wsHandler — GET /ws?token=<JWT>
-// Acepta la conexión WebSocket después de validar el token JWT.
 func (s *Server) wsHandler(w http.ResponseWriter, r *http.Request) {
-	// Validar JWT desde query param
 	tokenStr := r.URL.Query().Get("token")
 	if tokenStr == "" {
-		// También aceptar del header Authorization
 		auth := r.Header.Get("Authorization")
 		if strings.HasPrefix(auth, "Bearer ") {
 			tokenStr = strings.TrimPrefix(auth, "Bearer ")
@@ -395,7 +406,6 @@ func (s *Server) wsHandler(w http.ResponseWriter, r *http.Request) {
 
 	s.hub.Register <- client
 
-	// Enviar bienvenida con timestamp del servidor (para time drift)
 	client.Send <- map[string]interface{}{
 		"type":      "CONNECTED",
 		"timestamp": time.Now().UnixMilli(),
