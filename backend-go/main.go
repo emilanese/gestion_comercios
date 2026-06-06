@@ -150,9 +150,13 @@ func (s *Server) Run() {
 	mux.HandleFunc("/admin/unblock-device", s.jwtMiddleware(s.handler.RemoteUnblockDeviceHandler))
 
 	// ── Turnos (requiere JWT) ─────────────────────────────────────────────
-	mux.HandleFunc("/turns/open", s.jwtMiddleware(handlers.OpenTurnHandler))
-	mux.HandleFunc("/turns/close", s.jwtMiddleware(handlers.CloseTurnHandler))
-	mux.HandleFunc("/turns/active", s.jwtMiddleware(handlers.GetActiveTurnHandler))
+	mux.HandleFunc("/turns/open",   s.jwtMiddleware(s.handler.OpenTurnHandler))
+	mux.HandleFunc("/turns/close",  s.jwtMiddleware(s.handler.CloseTurnHandler))
+	mux.HandleFunc("/turns/active", s.jwtMiddleware(s.handler.GetActiveTurnHandler))
+
+	// ── Tickets (requiere JWT) ────────────────────────────────────────────
+	mux.HandleFunc("/tickets/confirm", s.jwtMiddleware(s.handler.ConfirmTicketHandler))
+	mux.HandleFunc("/tickets",         s.jwtMiddleware(s.handler.GetTicketsHandler))
 
 	// ── Productos (requiere JWT) ───────────────────────────────────────────
 	mux.HandleFunc("/products", s.jwtMiddleware(handlers.GetProductsHandler))
