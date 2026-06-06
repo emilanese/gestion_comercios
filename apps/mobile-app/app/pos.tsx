@@ -10,6 +10,7 @@ import {
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { t } from '@comercios/shared-logic';
+import { useOfflineTicket } from '../src/database/useOfflineTicket';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8080';
 
@@ -51,6 +52,7 @@ export default function POSScreen() {
   const [cargando, setCargando]     = useState(false);
   const [errorPago, setErrorPago]   = useState('');
   const [sucursalID, setSucursalID] = useState('');
+  const [lastOffline, setLastOffline] = useState(false);  // flag: último ticket fue offline
 
   useEffect(() => {
     const load = async () => {
@@ -126,6 +128,9 @@ export default function POSScreen() {
     mercado_pago: 'QR',
   };
 
+  // Hook offline-first con outbox WatermelonDB
+  const { confirmarTicket, pendingCount, flushing } = useOfflineTicket(jwt);
+
   const confirmar = async () => {
     if (!turnoID) {
       setErrorPago(t('pos.no_turn_open', 'No hay turno abierto'));
@@ -134,10 +139,9 @@ export default function POSScreen() {
     setCargando(true);
     setErrorPago('');
     try {
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8080';
-      const body = {
+      const result = await confirmarTicket({
         turnoID,
-        total:          total,
+        total,
         totalDescuento: 0,
         items: carrito.map((item) => ({
           productoID:     item.producto.productoID,
@@ -148,28 +152,16 @@ export default function POSScreen() {
           precioFinal:    item.subtotal,
           descuento:      0,
         })),
-        pagos: [{
-          tipoPago: TIPO_PAGO[medioKey] ?? 'EFECTIVO',
-          monto:    total,
-        }],
-      };
-
-      const res = await fetch(`${apiUrl}/tickets/confirm`, {
-        method:  'POST',
-        headers: {
-          'Content-Type':  'application/json',
-          'Authorization': `Bearer ${jwt}`,
-        },
-        body: JSON.stringify(body),
+        pagos: [{ tipoPago: TIPO_PAGO[medioKey] ?? 'EFECTIVO', monto: total }],
       });
 
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        setErrorPago(data.error ?? t('errors.server_error'));
+      if (!result.success) {
+        setErrorPago(result.error ?? t('errors.server_error'));
         return;
       }
 
-      setTicketID(data.ticket_id);
+      setLastOffline(result.offline ?? false);
+      setTicketID(result.ticketID ?? `OFFLINE-${Date.now()}`);
       setPaso('confirmado');
     } catch {
       setErrorPago(t('errors.network_error'));
@@ -268,9 +260,16 @@ export default function POSScreen() {
       {/* Header compacto */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{t('pos.title')}</Text>
-        <TouchableOpacity onPress={cerrarSesion}>
-          <Text style={styles.headerLink}>{t('common.exit')}</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          {pendingCount > 0 && (
+            <Text style={styles.offlineBadge}>
+              {flushing ? '⏳' : `📤 ${pendingCount}`}
+            </Text>
+          )}
+          <TouchableOpacity onPress={cerrarSesion}>
+            <Text style={styles.headerLink}>{t('common.exit')}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Búsqueda */}
@@ -398,4 +397,5 @@ const styles = StyleSheet.create({
   ticketID:         { fontFamily: 'monospace', fontSize: 14, color: C.muted },
   totalText:        { fontSize: 36, fontWeight: 'bold', color: C.text },
   vueltoText:       { fontSize: 20, fontWeight: 'bold', color: C.success },
+  offlineBadge:     { backgroundColor: '#fbbf24', color: '#78350f', fontSize: 12, fontWeight: 'bold', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, overflow: 'hidden' },
 });

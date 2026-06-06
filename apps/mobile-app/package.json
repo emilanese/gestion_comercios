@@ -16,6 +16,7 @@
   "dependencies": {
     "expo": "^50.0.0",
     "expo-router": "^3.0.0",
+    "expo-sqlite": "^13.0.0",
     "react": "^18.2.0",
     "react-native": "^0.73.0",
     "react-native-gesture-handler": "^2.14.0",
@@ -23,6 +24,8 @@
     "expo-status-bar": "^1.11.0",
     "@react-native-async-storage/async-storage": "^1.21.0",
     "@react-native-community/netinfo": "^11.0.0",
+    "@nozbe/watermelondb": "^0.27.1",
+    "@nozbe/with-observables": "^1.6.0",
     "@comercios/shared-logic": "*",
     "@comercios/ui-theme": "*"
   },
@@ -31,6 +34,8 @@
     "@types/react": "^18.2.37",
     "@types/react-native": "^0.72.0",
     "typescript": "^5.3.3",
-    "vitest": "^1.0.4"
+    "vitest": "^1.0.4",
+    "@babel/plugin-proposal-decorators": "^7.24.0",
+    "@babel/plugin-proposal-class-properties": "^7.18.6"
   }
 }

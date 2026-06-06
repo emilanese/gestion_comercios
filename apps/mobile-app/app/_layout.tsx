@@ -1,5 +1,6 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { DatabaseProvider } from '../src/database/DatabaseProvider';
 
 /**
  * RootLayout — Layout raíz de la aplicación AVANTI
@@ -18,7 +19,7 @@ import { StatusBar } from 'expo-status-bar';
  */
 export default function RootLayout() {
   return (
-    <>
+    <DatabaseProvider>
       <StatusBar style="light" />
       <Stack
         screenOptions={{
@@ -41,6 +42,6 @@ export default function RootLayout() {
         {/* ── AVANTI DEPÓSITO ─── ROL: DEPOSITO ─────────────────────────── */}
         <Stack.Screen name="deposito" options={{ title: '📦 AVANTI Depósito', headerShown: false }} />
       </Stack>
-    </>
+    </DatabaseProvider>
   );
 }
