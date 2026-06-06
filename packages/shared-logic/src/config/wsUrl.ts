@@ -42,8 +42,10 @@ export function getWsUrl(): string {
 
   // ── Prioridad 2: React Native / Expo (__DEV__ global) ────────────────────
   // En Expo, __DEV__ es true en desarrollo y false en el build de producción.
-  if (typeof __DEV__ !== 'undefined') {
-    return __DEV__ ? WS_DEV_URL : WS_PROD_URL;
+  // Usamos (globalThis as any).__DEV__ para que TypeScript no se queje en web.
+  const __dev__ = (globalThis as any).__DEV__;
+  if (typeof __dev__ !== 'undefined') {
+    return __dev__ ? WS_DEV_URL : WS_PROD_URL;
   }
 
   // ── Prioridad 3: Browser — detectar hostname ─────────────────────────────
@@ -66,8 +68,9 @@ export function getApiUrl(): string {
 
   if (envUrl) return envUrl;
 
-  if (typeof __DEV__ !== 'undefined') {
-    return __DEV__ ? 'http://localhost:8080' : 'https://api.avanti-retail.cloud';
+  const __dev__ = (globalThis as any).__DEV__;
+  if (typeof __dev__ !== 'undefined') {
+    return __dev__ ? 'http://localhost:8080' : 'https://api.avanti-retail.cloud';
   }
 
   if (typeof window !== 'undefined' && window.location) {
