@@ -17,11 +17,21 @@
     "no_connection": "No connection",
     "no_connection_detail": "Could not connect to the server",
     "required_fields": "Required fields",
-    "version": "v{{version}}"
+    "version": "v{{version}}",
+    "online": "● Online",
+    "offline": "○ Offline",
+    "searching": "Searching...",
+    "ticket_label": "Ticket:"
   },
 
   "auth": {
     "login": "Sign In",
+    "subtitle": "Sign in to your account",
+    "email": "Email",
+    "password": "Password",
+    "signing_in": "Signing in...",
+    "invalid_credentials": "Invalid credentials",
+    "cashier_link": "Cashier? Go to POS →",
     "start_turn": "Start Shift",
     "enter_pin": "Enter your cashier PIN",
     "pin": "PIN",

@@ -17,11 +17,21 @@
     "no_connection": "Sin conexión",
     "no_connection_detail": "No se pudo conectar con el servidor",
     "required_fields": "Campos requeridos",
-    "version": "v{{version}}"
+    "version": "v{{version}}",
+    "online": "● En línea",
+    "offline": "○ Sin conexión",
+    "searching": "Buscando...",
+    "ticket_label": "Ticket:"
   },
 
   "auth": {
     "login": "Iniciar Sesión",
+    "subtitle": "Ingresá con tu cuenta",
+    "email": "Email",
+    "password": "Contraseña",
+    "signing_in": "Ingresando...",
+    "invalid_credentials": "Credenciales inválidas",
+    "cashier_link": "¿Sos cajero? Ingresá al POS →",
     "start_turn": "Iniciar Turno",
     "enter_pin": "Ingresá tu PIN de cajero",
     "pin": "PIN",
