@@ -1,3 +1,4 @@
+// @ts-nocheck — React Native only component, excluded from web-app type checking
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,

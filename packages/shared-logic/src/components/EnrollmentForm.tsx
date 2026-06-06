@@ -1,3 +1,4 @@
+// @ts-nocheck — uses WatermelonDB + platform-specific APIs, excluded from web-app type checking
 /**
  * EnrollmentForm Component
  * Handles QR scanning, server enrollment, and local database sync
