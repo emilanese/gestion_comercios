@@ -1,7 +1,3 @@
-// Export database schema + models
-export * from './db/schema';
-export * from './db/models/index';
-
 // Export config
 export * from './config';
 
