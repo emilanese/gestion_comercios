@@ -5,7 +5,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, FlatList,
-  StyleSheet, SafeAreaView, Alert, ActivityIndicator
+  StyleSheet, SafeAreaView, ActivityIndicator
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -47,13 +47,18 @@ export default function POSScreen() {
   const [montoEntregado, setMontoEntregado] = useState('');
   const [ticketID, setTicketID]     = useState('');
   const [jwt, setJwt]               = useState('');
+  const [turnoID, setTurnoID]       = useState('');
+  const [cargando, setCargando]     = useState(false);
+  const [errorPago, setErrorPago]   = useState('');
   const [sucursalID, setSucursalID] = useState('');
 
   useEffect(() => {
     const load = async () => {
-      const j = await AsyncStorage.getItem('jwt') ?? '';
-      const s = await AsyncStorage.getItem('sucursal_id') ?? '';
+      const j  = await AsyncStorage.getItem('jwt')       ?? '';
+      const s  = await AsyncStorage.getItem('sucursal_id') ?? '';
+      const tn = await AsyncStorage.getItem('turno_id')  ?? '';
       setJwt(j);
+      setTurnoID(tn);
       setSucursalID(s);
       if (!j) router.replace('/login');
     };
@@ -111,11 +116,66 @@ export default function POSScreen() {
   const total  = carrito.reduce((s, i) => s + i.subtotal, 0);
   const vuelto = Number(montoEntregado) - total;
 
+  // Mapa medioKey → tipoPago backend
+  const TIPO_PAGO: Record<string, string> = {
+    cash:         'EFECTIVO',
+    debit:        'DEBITO',
+    credit:       'CREDITO',
+    transfer:     'TRANSFERENCIA',
+    qr:           'QR',
+    mercado_pago: 'QR',
+  };
+
   const confirmar = async () => {
-    const id = `TKT-${Date.now()}`;
-    setTicketID(id);
-    setPaso('confirmado');
-    // TODO: guardar en WatermelonDB y sincronizar via Outbox
+    if (!turnoID) {
+      setErrorPago(t('pos.no_turn_open', 'No hay turno abierto'));
+      return;
+    }
+    setCargando(true);
+    setErrorPago('');
+    try {
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8080';
+      const body = {
+        turnoID,
+        total:          total,
+        totalDescuento: 0,
+        items: carrito.map((item) => ({
+          productoID:     item.producto.productoID,
+          nombreProducto: item.producto.nombre,
+          ean:            item.producto.ean ?? '',
+          cantidad:       item.cantidad,
+          precioUnitario: item.producto.precioOferta ?? item.producto.precioVenta,
+          precioFinal:    item.subtotal,
+          descuento:      0,
+        })),
+        pagos: [{
+          tipoPago: TIPO_PAGO[medioKey] ?? 'EFECTIVO',
+          monto:    total,
+        }],
+      };
+
+      const res = await fetch(`${apiUrl}/tickets/confirm`, {
+        method:  'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': `Bearer ${jwt}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setErrorPago(data.error ?? t('errors.server_error'));
+        return;
+      }
+
+      setTicketID(data.ticket_id);
+      setPaso('confirmado');
+    } catch {
+      setErrorPago(t('errors.network_error'));
+    } finally {
+      setCargando(false);
+    }
   };
 
   const nuevaVenta = () => {

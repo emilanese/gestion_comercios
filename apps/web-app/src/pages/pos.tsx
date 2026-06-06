@@ -52,9 +52,21 @@ const POS: NextPage = () => {
   const [montoEntregado, setMontoEntregado] = useState('');
   const [ticketID, setTicketID] = useState('');
   const [wsStatus, setWsStatus] = useState<'online' | 'offline'>('offline');
+  const [cargando, setCargando] = useState(false);
+  const [errorPago, setErrorPago] = useState('');
 
-  const jwt = typeof window !== 'undefined' ? localStorage.getItem('jwt') ?? '' : '';
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
+  const jwt      = typeof window !== 'undefined' ? localStorage.getItem('jwt')       ?? '' : '';
+  const turnoID  = typeof window !== 'undefined' ? localStorage.getItem('turno_id')  ?? '' : '';
+  const apiUrl   = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
+
+  // Mapa de medio de pago UI → tipo enum backend
+  const TIPO_PAGO: Record<string, string> = {
+    efectivo:      'EFECTIVO',
+    debito:        'DEBITO',
+    credito:       'CREDITO',
+    transferencia: 'TRANSFERENCIA',
+    qr:            'QR',
+  };
 
   // ── WebSocket de estado ─────────────────────────────────────────────────
   useEffect(() => {
@@ -139,12 +151,56 @@ const POS: NextPage = () => {
   const totalCarrito = carrito.reduce((sum, i) => sum + i.subtotal, 0);
   const vuelto = Number(montoEntregado) - totalCarrito;
 
-  // ── Confirmar pago ──────────────────────────────────────────────────────
+  // ── Confirmar pago — llama al backend ─────────────────────────────────
   const confirmarPago = async () => {
-    const id = `TKT-${Date.now()}`;
-    setTicketID(id);
-    setPaso('confirmado');
-    // TODO: Llamar a /tickets/confirm y sincronizar con WatermelonDB
+    if (!turnoID) {
+      setErrorPago('No hay turno abierto. Abrí un turno desde el hub.');
+      return;
+    }
+    setCargando(true);
+    setErrorPago('');
+    try {
+      const body = {
+        turnoID,
+        total:          totalCarrito,
+        totalDescuento: 0,
+        items: carrito.map((item) => ({
+          productoID:     item.producto.productoID,
+          nombreProducto: item.producto.nombre,
+          ean:            item.producto.ean,
+          cantidad:       item.cantidad,
+          precioUnitario: item.precioUnitario,
+          precioFinal:    item.subtotal,
+          descuento:      0,
+        })),
+        pagos: [{
+          tipoPago: TIPO_PAGO[medioPago] ?? 'EFECTIVO',
+          monto:    totalCarrito,
+        }],
+      };
+
+      const res = await fetch(`${apiUrl}/tickets/confirm`, {
+        method:  'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': `Bearer ${jwt}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setErrorPago(data.error ?? 'Error al confirmar el ticket');
+        return;
+      }
+
+      setTicketID(data.ticket_id);
+      setPaso('confirmado');
+    } catch {
+      setErrorPago('Error de conexión. Verificá que el servidor esté disponible.');
+    } finally {
+      setCargando(false);
+    }
   };
 
   const nuevaVenta = () => {
@@ -298,12 +354,15 @@ const POS: NextPage = () => {
                 <button onClick={() => setPaso('carrito')} className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-3 rounded-xl transition">
                   {t('pos.back_to_sale')}
                 </button>
+                {errorPago && (
+                  <p className="text-red-500 text-sm text-center mb-2">{errorPago}</p>
+                )}
                 <button
                   onClick={confirmarPago}
-                  disabled={medioPago === 'efectivo' && Number(montoEntregado) < totalCarrito}
+                  disabled={cargando || (medioPago === 'efectivo' && Number(montoEntregado) < totalCarrito)}
                   className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-slate-300 text-white font-bold py-3 rounded-xl transition"
                 >
-                  {t('pos.confirm_sale')}
+                  {cargando ? '...' : t('pos.confirm_sale')}
                 </button>
               </div>
             </>
