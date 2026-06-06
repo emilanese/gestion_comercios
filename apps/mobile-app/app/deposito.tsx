@@ -1,54 +1,39 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, SafeAreaView, FlatList, Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { t } from '@comercios/shared-logic';
 
 /**
  * DEPOSITO — Pantalla exclusiva para el rol DEPOSITO (Operario logístico)
+ * Todos los textos visibles se leen desde los diccionarios de i18n.
  *
- * Interfaz puramente logística basada en la dupla: Código de Barras + Cantidad
- *
- * Lo que MUESTRA:
- *  - Nombre del producto
- *  - Código de barras (EAN)
- *  - Código interno
- *  - Cantidad a ingresar
- *
- * Lo que NUNCA MUESTRA:
- *  - Precios de venta
- *  - Costos de compra
- *  - Márgenes o ganancias
- *  - Historial de ventas o tickets
- *
- * Acciones disponibles:
- *  - Ingreso de remito (barcode + cantidad)
- *  - Egreso por rotura/devolución
- *  - Auditoría de stock físico (escaneo + conteo)
+ * Lo que NUNCA MUESTRA: precios, costos, márgenes, historial de ventas.
  */
 
-interface RemitolItem {
-  id: string;
-  ean: string;
-  nombre: string;
+interface RemitoItem {
+  id:       string;
+  ean:      string;
+  nombre:   string;
   cantidad: number;
-  tipo: 'INGRESO' | 'EGRESO';
+  tipo:     'INGRESO' | 'EGRESO';
 }
 
 export default function Deposito() {
   const router = useRouter();
-  const [ean, setEan] = useState('');
+  const [ean, setEan]           = useState('');
   const [cantidad, setCantidad] = useState('1');
-  const [items, setItems] = useState<RemitolItem[]>([]);
-  const [modo, setModo] = useState<'INGRESO' | 'EGRESO'>('INGRESO');
+  const [items, setItems]       = useState<RemitoItem[]>([]);
+  const [modo, setModo]         = useState<'INGRESO' | 'EGRESO'>('INGRESO');
 
-  const handleLogout = async () => {
-    Alert.alert('Cerrar sesión', '¿Querés desloguearte?', [
-      { text: 'Cancelar', style: 'cancel' },
+  const handleLogout = () => {
+    Alert.alert(t('auth.logout'), t('auth.logout_confirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Salir',
+        text: t('common.exit'),
         style: 'destructive',
         onPress: async () => {
           await AsyncStorage.removeItem('jwt');
@@ -62,21 +47,21 @@ export default function Deposito() {
   const handleAgregarItem = () => {
     const cantNum = parseInt(cantidad, 10);
     if (!ean.trim()) {
-      Alert.alert('Error', 'Ingresá un código de barras');
+      Alert.alert(t('common.error'), t('deposito.error_ean'));
       return;
     }
     if (isNaN(cantNum) || cantNum <= 0) {
-      Alert.alert('Error', 'La cantidad debe ser mayor a 0');
+      Alert.alert(t('common.error'), t('deposito.error_qty'));
       return;
     }
 
-    // TODO: buscar nombre del producto por EAN en la DB local
-    const nuevoItem: RemitolItem = {
-      id: Date.now().toString(),
-      ean: ean.trim(),
-      nombre: `Producto ${ean.trim()}`, // reemplazar con lookup en WatermelonDB
+    // TODO: buscar nombre del producto por EAN en la DB local (WatermelonDB)
+    const nuevoItem: RemitoItem = {
+      id:       Date.now().toString(),
+      ean:      ean.trim(),
+      nombre:   `Producto ${ean.trim()}`,
       cantidad: cantNum,
-      tipo: modo,
+      tipo:     modo,
     };
 
     setItems(prev => [nuevoItem, ...prev]);
@@ -86,24 +71,24 @@ export default function Deposito() {
 
   const handleConfirmarRemito = () => {
     if (items.length === 0) {
-      Alert.alert('Sin items', 'Agregá al menos un producto al remito');
+      Alert.alert(t('deposito.error_no_items'), t('deposito.error_no_items_detail'));
       return;
     }
-    Alert.alert(
-      'Confirmar remito',
-      `¿Confirmar ${modo === 'INGRESO' ? 'ingreso' : 'egreso'} de ${items.length} ítem(s)?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Confirmar',
-          onPress: () => {
-            // TODO: guardar en WatermelonDB + enviar por WS al Backoffice
-            Alert.alert('✅ Remito registrado', 'El movimiento fue guardado correctamente.');
-            setItems([]);
-          },
+    const msg = modo === 'INGRESO'
+      ? t('deposito.confirm_receipt_message',  { count: items.length })
+      : t('deposito.confirm_disposal_message', { count: items.length });
+
+    Alert.alert(t('deposito.confirm_title'), msg, [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.confirm'),
+        onPress: () => {
+          // TODO: guardar en WatermelonDB + enviar por WS al Backoffice
+          Alert.alert(t('deposito.success_title'), t('deposito.success_detail'));
+          setItems([]);
         },
-      ]
-    );
+      },
+    ]);
   };
 
   return (
@@ -111,8 +96,8 @@ export default function Deposito() {
       {/* ── Header ─── */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.appName}>📦 AVANTI Depósito</Text>
-          <Text style={styles.subtitle}>Operario Logístico</Text>
+          <Text style={styles.appName}>{t('deposito.title')}</Text>
+          <Text style={styles.subtitle}>{t('deposito.subtitle')}</Text>
         </View>
         <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
           <Text style={styles.logoutText}>↩</Text>
@@ -126,7 +111,7 @@ export default function Deposito() {
           onPress={() => setModo('INGRESO')}
         >
           <Text style={[styles.modoBtnText, modo === 'INGRESO' && styles.modoBtnTextActive]}>
-            ⬇ Ingreso
+            {t('deposito.mode_receipt')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -134,7 +119,7 @@ export default function Deposito() {
           onPress={() => setModo('EGRESO')}
         >
           <Text style={[styles.modoBtnText, modo === 'EGRESO' && styles.modoBtnTextActive]}>
-            ⬆ Egreso
+            {t('deposito.mode_disposal')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -144,7 +129,7 @@ export default function Deposito() {
         <View style={styles.inputRow}>
           <TextInput
             style={[styles.input, styles.inputEan]}
-            placeholder="Código de barras (EAN)"
+            placeholder={t('deposito.ean_placeholder')}
             placeholderTextColor="#94a3b8"
             value={ean}
             onChangeText={setEan}
@@ -154,7 +139,7 @@ export default function Deposito() {
           />
           <TextInput
             style={[styles.input, styles.inputCantidad]}
-            placeholder="Cant."
+            placeholder={t('deposito.qty_placeholder')}
             placeholderTextColor="#94a3b8"
             value={cantidad}
             onChangeText={setCantidad}
@@ -164,7 +149,7 @@ export default function Deposito() {
           />
         </View>
         <TouchableOpacity style={styles.agregarBtn} onPress={handleAgregarItem}>
-          <Text style={styles.agregarBtnText}>+ Agregar</Text>
+          <Text style={styles.agregarBtnText}>{t('deposito.add_item')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -186,7 +171,7 @@ export default function Deposito() {
         )}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>Escaneá o ingresá un código de barras</Text>
+            <Text style={styles.emptyText}>{t('deposito.empty_items')}</Text>
           </View>
         }
       />
@@ -194,9 +179,11 @@ export default function Deposito() {
       {/* ── Confirmar ─── */}
       {items.length > 0 && (
         <View style={styles.footer}>
-          <Text style={styles.footerCount}>{items.length} ítem(s) en el remito</Text>
+          <Text style={styles.footerCount}>
+            {t('deposito.receipt_count', { count: items.length })}
+          </Text>
           <TouchableOpacity style={styles.confirmarBtn} onPress={handleConfirmarRemito}>
-            <Text style={styles.confirmarBtnText}>✅ Confirmar Remito</Text>
+            <Text style={styles.confirmarBtnText}>{t('deposito.confirm_receipt')}</Text>
           </TouchableOpacity>
         </View>
       )}

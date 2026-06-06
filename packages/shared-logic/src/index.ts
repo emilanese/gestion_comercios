@@ -53,7 +53,8 @@ export type {
 } from './sync/reconnect';
 
 // Export i18n
-export { i18n, getTranslation, setLanguage } from './i18n/i18n';
+export { i18n, getTranslation, t, setLanguage } from './i18n/i18n';
+export type { Locale } from './i18n/i18n';
 
 // Export permissions + roles
 export {

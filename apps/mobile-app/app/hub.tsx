@@ -5,98 +5,51 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { t } from '@comercios/shared-logic';
 
 /**
  * HUB — Pantalla principal para ADMIN y ENCARGADO
- *
- * Accesos rápidos a los módulos de gestión:
- *  - Dashboard / métricas de sucursal
- *  - Gestión de stock y alertas
- *  - Ingreso de remitos
- *  - Historial de ventas
- *  - Auditoría de autorizaciones
- *  - Acceso rápido al POS (si es ADMIN o ENCARGADO)
- *
- * La información sensible (costos, márgenes, métricas globales)
- * se muestra SOLO si el rol es ADMIN.
+ * Todos los textos visibles se leen desde los diccionarios de i18n.
  */
 
 interface HubModule {
-  id: string;
-  icon: string;
-  title: string;
-  subtitle: string;
-  color: string;
-  route?: string;
+  id:        string;
+  icon:      string;
+  titleKey:  string;
+  subtitleKey: string;
+  color:     string;
   onlyAdmin?: boolean;
 }
 
 const HUB_MODULES: HubModule[] = [
-  {
-    id: 'pos',
-    icon: '🏪',
-    title: 'Ir al POS',
-    subtitle: 'Abrir mostrador de cobros',
-    color: '#1d4ed8',
-  },
-  {
-    id: 'stock',
-    icon: '📦',
-    title: 'Stock y Alertas',
-    subtitle: 'Ver nivel de inventario',
-    color: '#059669',
-  },
-  {
-    id: 'ventas',
-    icon: '📊',
-    title: 'Historial de Ventas',
-    subtitle: 'Tickets y resumen del turno',
-    color: '#7c3aed',
-  },
-  {
-    id: 'remitos',
-    icon: '📋',
-    title: 'Ingresar Remito',
-    subtitle: 'Registrar mercadería recibida',
-    color: '#d97706',
-  },
-  {
-    id: 'metricas',
-    icon: '💰',
-    title: 'Métricas y Costos',
-    subtitle: 'Ganancias y márgenes globales',
-    color: '#dc2626',
-    onlyAdmin: true,
-  },
-  {
-    id: 'auditoria',
-    icon: '🔍',
-    title: 'Auditoría',
-    subtitle: 'Log de autorizaciones',
-    color: '#475569',
-  },
+  { id: 'pos',      icon: '🏪', titleKey: 'hub.go_to_pos',       subtitleKey: 'hub.go_to_pos_subtitle',       color: '#1d4ed8' },
+  { id: 'stock',    icon: '📦', titleKey: 'hub.stock_alerts',    subtitleKey: 'hub.stock_alerts_subtitle',    color: '#059669' },
+  { id: 'ventas',   icon: '📊', titleKey: 'hub.sales_history',   subtitleKey: 'hub.sales_history_subtitle',   color: '#7c3aed' },
+  { id: 'remitos',  icon: '📋', titleKey: 'hub.receipt_entry',   subtitleKey: 'hub.receipt_entry_subtitle',   color: '#d97706' },
+  { id: 'metricas', icon: '💰', titleKey: 'hub.metrics',         subtitleKey: 'hub.metrics_subtitle',         color: '#dc2626', onlyAdmin: true },
+  { id: 'auditoria',icon: '🔍', titleKey: 'hub.audit',           subtitleKey: 'hub.audit_subtitle',           color: '#475569' },
 ];
 
 export default function Hub() {
   const router = useRouter();
-  const [rol, setRol] = useState<string>('');
+  const [rol, setRol]                 = useState<string>('');
   const [comercioNombre, setComercioNombre] = useState<string>('');
 
   useEffect(() => {
     const loadSession = async () => {
-      const storedRol  = await AsyncStorage.getItem('rol')  ?? '';
-      const storedName = await AsyncStorage.getItem('nombre_empresa') ?? 'Tu Comercio';
+      const storedRol  = await AsyncStorage.getItem('rol')            ?? '';
+      const storedName = await AsyncStorage.getItem('nombre_empresa') ?? t('common.app_name');
       setRol(storedRol);
       setComercioNombre(storedName);
     };
     loadSession();
   }, []);
 
-  const handleLogout = async () => {
-    Alert.alert('Cerrar sesión', '¿Querés desloguearte?', [
-      { text: 'Cancelar', style: 'cancel' },
+  const handleLogout = () => {
+    Alert.alert(t('auth.logout'), t('auth.logout_confirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Salir',
+        text: t('common.exit'),
         style: 'destructive',
         onPress: async () => {
           await AsyncStorage.removeItem('jwt');
@@ -112,12 +65,7 @@ export default function Hub() {
       router.push('/pos');
       return;
     }
-    // Módulos en desarrollo
-    Alert.alert(
-      module.title,
-      `${module.subtitle}\n\n(Módulo en desarrollo)`,
-      [{ text: 'OK' }]
-    );
+    Alert.alert(t(module.titleKey), `${t(module.subtitleKey)}\n\n(${t('hub.module_wip')})`);
   };
 
   const visibleModules = HUB_MODULES.filter(m => !m.onlyAdmin || rol === 'ADMIN');
@@ -127,7 +75,7 @@ export default function Hub() {
       {/* ── Header ─── */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.appName}>⚙️ AVANTI HUB</Text>
+          <Text style={styles.appName}>{t('hub.title')}</Text>
           <Text style={styles.comercioName}>{comercioNombre}</Text>
         </View>
         <View style={styles.headerRight}>
@@ -151,14 +99,16 @@ export default function Hub() {
           >
             <Text style={styles.moduleIcon}>{module.icon}</Text>
             <View style={styles.moduleText}>
-              <Text style={styles.moduleTitle}>{module.title}</Text>
-              <Text style={styles.moduleSubtitle}>{module.subtitle}</Text>
+              <Text style={styles.moduleTitle}>{t(module.titleKey)}</Text>
+              <Text style={styles.moduleSubtitle}>{t(module.subtitleKey)}</Text>
             </View>
           </TouchableOpacity>
         ))}
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>AVANTI v1.0 • {rol}</Text>
+          <Text style={styles.footerText}>
+            {t('hub.footer', { version: '1.0', role: rol })}
+          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -166,28 +116,28 @@ export default function Hub() {
 }
 
 const styles = StyleSheet.create({
-  container:       { flex: 1, backgroundColor: '#f1f5f9' },
-  header:          { backgroundColor: '#1d4ed8', paddingHorizontal: 20, paddingVertical: 16,
-                     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  appName:         { fontSize: 18, fontWeight: 'bold', color: '#fff' },
-  comercioName:    { fontSize: 13, color: '#bfdbfe', marginTop: 2 },
-  headerRight:     { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  rolBadge:        { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  rolAdmin:        { backgroundColor: '#fbbf24' },
-  rolEncargado:    { backgroundColor: '#34d399' },
-  rolText:         { fontSize: 11, fontWeight: '700', color: '#1e293b' },
-  logoutBtn:       { padding: 6 },
-  logoutText:      { fontSize: 20, color: '#93c5fd' },
-  grid:            { padding: 16, gap: 12, paddingBottom: 40 },
-  moduleCard:      { backgroundColor: '#fff', borderRadius: 12, padding: 16,
-                     flexDirection: 'row', alignItems: 'center', gap: 14,
-                     borderLeftWidth: 4,
-                     shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4,
-                     elevation: 2 },
-  moduleIcon:      { fontSize: 32 },
-  moduleText:      { flex: 1 },
-  moduleTitle:     { fontSize: 16, fontWeight: '700', color: '#1e293b' },
-  moduleSubtitle:  { fontSize: 13, color: '#64748b', marginTop: 2 },
-  footer:          { alignItems: 'center', marginTop: 8 },
-  footerText:      { fontSize: 11, color: '#94a3b8' },
+  container:     { flex: 1, backgroundColor: '#f1f5f9' },
+  header:        { backgroundColor: '#1d4ed8', paddingHorizontal: 20, paddingVertical: 16,
+                   flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  appName:       { fontSize: 18, fontWeight: 'bold', color: '#fff' },
+  comercioName:  { fontSize: 13, color: '#bfdbfe', marginTop: 2 },
+  headerRight:   { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  rolBadge:      { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+  rolAdmin:      { backgroundColor: '#fbbf24' },
+  rolEncargado:  { backgroundColor: '#34d399' },
+  rolText:       { fontSize: 11, fontWeight: '700', color: '#1e293b' },
+  logoutBtn:     { padding: 6 },
+  logoutText:    { fontSize: 20, color: '#93c5fd' },
+  grid:          { padding: 16, gap: 12, paddingBottom: 40 },
+  moduleCard:    { backgroundColor: '#fff', borderRadius: 12, padding: 16,
+                   flexDirection: 'row', alignItems: 'center', gap: 14,
+                   borderLeftWidth: 4,
+                   shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4,
+                   elevation: 2 },
+  moduleIcon:    { fontSize: 32 },
+  moduleText:    { flex: 1 },
+  moduleTitle:   { fontSize: 16, fontWeight: '700', color: '#1e293b' },
+  moduleSubtitle:{ fontSize: 13, color: '#64748b', marginTop: 2 },
+  footer:        { alignItems: 'center', marginTop: 8 },
+  footerText:    { fontSize: 11, color: '#94a3b8' },
 });

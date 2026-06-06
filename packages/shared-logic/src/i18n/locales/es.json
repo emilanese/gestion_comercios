@@ -1,6 +1,6 @@
 {
   "common": {
-    "app_name": "Mi Comercio SaaS",
+    "app_name": "AVANTI",
     "loading": "Cargando...",
     "error": "Error",
     "success": "Éxito",
@@ -11,53 +11,148 @@
     "edit": "Editar",
     "add": "Agregar",
     "back": "Atrás",
-    "next": "Siguiente"
+    "next": "Siguiente",
+    "ok": "OK",
+    "exit": "Salir",
+    "no_connection": "Sin conexión",
+    "no_connection_detail": "No se pudo conectar con el servidor",
+    "required_fields": "Campos requeridos",
+    "version": "v{{version}}"
   },
+
   "auth": {
     "login": "Iniciar Sesión",
+    "start_turn": "Iniciar Turno",
+    "enter_pin": "Ingresá tu PIN de cajero",
     "pin": "PIN",
+    "pin_invalid": "PIN inválido",
+    "pin_min_length": "El PIN debe tener al menos 4 dígitos",
+    "pin_incorrect": "PIN incorrecto",
     "device_enrollment": "Enrolamiento de Dispositivo",
     "scan_qr": "Escanear Código QR",
     "enter_token": "Ingresar Token",
     "invalid_pin": "PIN Inválido",
-    "device_blocked": "Dispositivo Bloqueado"
+    "device_blocked": "Dispositivo Bloqueado",
+    "logout": "Cerrar sesión",
+    "logout_confirm": "¿Querés desloguearte?"
   },
+
+  "enroll": {
+    "title": "Enrolar Dispositivo",
+    "subtitle": "Ingresá el código que el gestor del comercio te proporcionó para autorizar este dispositivo como punto de venta.",
+    "mode_code": "⌨️ Código",
+    "mode_qr": "📷 QR (próx.)",
+    "code_label": "Código de enrolamiento",
+    "code_placeholder": "Ej: COMERCIO-AB12-CD34",
+    "device_name_label": "Nombre de este dispositivo",
+    "device_name_placeholder": "Ej: Caja 1 - Sucursal Centro",
+    "submit": "Enrolar este dispositivo",
+    "hint": "Si no tenés el código, solicitáselo al administrador del comercio desde el panel web → Dispositivos → Nuevo enrolamiento.",
+    "required_fields_detail": "Completá el código de enrolamiento y el nombre del dispositivo",
+    "error_title": "Error de enrolamiento",
+    "error_invalid_code": "Código inválido o expirado",
+    "success_title": "✅ Dispositivo enrolado",
+    "success_detail": "Este dispositivo quedó registrado como \"{{name}}\" en la sucursal.",
+    "continue": "Continuar"
+  },
+
   "pos": {
+    "title": "🏪 POS",
     "turn_open": "Abrir Turno",
     "turn_close": "Cerrar Turno",
     "initial_cash": "Monto Inicial de Caja",
     "add_product": "Agregar Producto",
     "scan_barcode": "Escanear Código de Barras",
+    "search_placeholder": "🔍 Nombre, marca o EAN...",
     "search_product": "Buscar Producto",
+    "cart_empty": "Buscá un producto para agregar",
     "quantity": "Cantidad",
     "price": "Precio",
-    "total": "Total",
+    "total": "Total:",
+    "checkout": "Cobrar →",
+    "new_sale": "Nueva Venta",
     "payment_method": "Medio de Pago",
+    "choose_payment": "💳 Elegí medio de pago",
     "cash": "Efectivo",
+    "debit": "Débito",
+    "credit": "Crédito",
+    "qr": "QR",
+    "transfer": "Transferencia",
     "card": "Tarjeta",
     "mercado_pago": "Mercado Pago",
+    "amount_tendered": "Monto entregado",
     "change": "Vuelto",
+    "change_label": "Vuelto: ${{amount}}",
     "ticket_id": "Número de Ticket",
     "seller": "Vendedor",
     "customer_name": "Nombre del Cliente",
     "finish_sale": "Finalizar Venta",
+    "confirm_sale": "Confirmar ✓",
+    "sale_confirmed": "✅ ¡Venta confirmada!",
     "balance_by_payment": "Balance por Medio de Pago",
     "pending_tickets": "Tickets Pendientes",
-    "confirmed_tickets": "Tickets Confirmados"
+    "confirmed_tickets": "Tickets Confirmados",
+    "stock_label": "Stock: {{count}}",
+    "back_to_sale": "← Volver"
   },
+
+  "hub": {
+    "title": "⚙️ AVANTI HUB",
+    "role_admin": "ADMIN",
+    "role_manager": "ENCARGADO",
+    "go_to_pos": "Ir al POS",
+    "go_to_pos_subtitle": "Abrir mostrador de cobros",
+    "stock_alerts": "Stock y Alertas",
+    "stock_alerts_subtitle": "Ver nivel de inventario",
+    "sales_history": "Historial de Ventas",
+    "sales_history_subtitle": "Tickets y resumen del turno",
+    "receipt_entry": "Ingresar Remito",
+    "receipt_entry_subtitle": "Registrar mercadería recibida",
+    "metrics": "Métricas y Costos",
+    "metrics_subtitle": "Ganancias y márgenes globales",
+    "audit": "Auditoría",
+    "audit_subtitle": "Log de autorizaciones",
+    "module_wip": "Módulo en desarrollo",
+    "footer": "AVANTI v{{version}} • {{role}}"
+  },
+
+  "deposito": {
+    "title": "📦 AVANTI Depósito",
+    "subtitle": "Operario Logístico",
+    "mode_receipt": "⬇ Ingreso",
+    "mode_disposal": "⬆ Egreso",
+    "ean_placeholder": "Código de barras (EAN)",
+    "qty_placeholder": "Cant.",
+    "add_item": "+ Agregar",
+    "confirm_receipt": "✅ Confirmar Remito",
+    "receipt_count": "{{count}} ítem(s) en el remito",
+    "confirm_title": "Confirmar remito",
+    "confirm_receipt_message": "¿Confirmar ingreso de {{count}} ítem(s)?",
+    "confirm_disposal_message": "¿Confirmar egreso de {{count}} ítem(s)?",
+    "success_title": "✅ Remito registrado",
+    "success_detail": "El movimiento fue guardado correctamente.",
+    "empty_items": "Escaneá o ingresá un código de barras",
+    "error_ean": "Ingresá un código de barras",
+    "error_qty": "La cantidad debe ser mayor a 0",
+    "error_no_items": "Sin items",
+    "error_no_items_detail": "Agregá al menos un producto al remito"
+  },
+
   "turn": {
     "opening": "Apertura de Turno",
     "initial_cash": "Monto Inicial de Caja",
-    "enter_initial_amount": "Ingresa el monto inicial de la caja",
+    "enter_initial_amount": "Ingresá el monto inicial de la caja",
     "open_cash": "Abrir Caja",
     "start_selling": "Comienza a vender",
     "help_initial_amount": "Este monto es el cambio disponible al iniciar el turno"
   },
+
   "labels": {
     "terminal": "Terminal",
     "operator": "Operador",
     "amount": "Monto"
   },
+
   "inventory": {
     "stock_adjustment": "Ajuste de Inventario",
     "receipt": "Recepción de Mercadería",
@@ -76,6 +171,7 @@
     "cost_updated": "Costo Actualizado",
     "stock_minimum": "Stock Mínimo"
   },
+
   "products": {
     "product": "Producto",
     "products": "Productos",
@@ -90,12 +186,14 @@
     "by_branch": "Por Sucursal",
     "price_history": "Historial de Precios"
   },
+
   "branches": {
     "branch": "Sucursal",
     "branches": "Sucursales",
     "central_office": "Casa Central",
     "warehouse": "Depósito"
   },
+
   "promotions": {
     "promotion": "Promoción",
     "promotions": "Promociones",
@@ -110,6 +208,7 @@
     "finished": "Finalizada",
     "discount": "Descuento"
   },
+
   "backoffice": {
     "dashboard": "Panel de Control",
     "sales_today": "Ventas Hoy",
@@ -119,11 +218,12 @@
     "payment_method": "Método de Pago",
     "configure": "Configurar"
   },
+
   "errors": {
     "network_error": "Error de Conexión",
     "offline_mode": "Modo Offline - Cambios se sincronizarán cuando haya conexión",
     "invalid_data": "Datos Inválidos",
-    "invalid_amount": "Ingresa un monto válido",
+    "invalid_amount": "Ingresá un monto válido",
     "negative_amount": "El monto no puede ser negativo",
     "turn_open_failed": "Error al abrir el turno",
     "unauthorized": "No Autorizado",

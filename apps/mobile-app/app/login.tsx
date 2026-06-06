@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { t } from '@comercios/shared-logic';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8080';
 
@@ -31,7 +32,7 @@ export default function LoginScreen() {
 
   const handleSubmit = async () => {
     if (pin.length < 4) {
-      Alert.alert('PIN inválido', 'El PIN debe tener al menos 4 dígitos');
+      Alert.alert(t('auth.pin_invalid'), t('auth.pin_min_length'));
       return;
     }
     setLoading(true);
@@ -46,16 +47,16 @@ export default function LoginScreen() {
 
       if (!res.ok || !data.success) {
         setPin('');
-        Alert.alert('Error', data.error ?? 'PIN incorrecto');
+        Alert.alert(t('common.error'), data.error ?? t('auth.pin_incorrect'));
         return;
       }
 
-      await AsyncStorage.setItem('jwt',       data.token        ?? '');
-      await AsyncStorage.setItem('sucursal_id', data.sucursal_id ?? '');
-      await AsyncStorage.setItem('operador',  data.operador_nombre ?? '');
+      await AsyncStorage.setItem('jwt',         data.token             ?? '');
+      await AsyncStorage.setItem('sucursal_id', data.sucursal_id       ?? '');
+      await AsyncStorage.setItem('operador',    data.operador_nombre   ?? '');
       router.replace('/pos');
     } catch {
-      Alert.alert('Sin conexión', 'No se pudo conectar con el servidor');
+      Alert.alert(t('common.no_connection'), t('common.no_connection_detail'));
     } finally {
       setLoading(false);
     }
@@ -64,8 +65,8 @@ export default function LoginScreen() {
   return (
     <SafeAreaView style={styles.root}>
       <View style={styles.header}>
-        <Text style={styles.title}>🏪 Iniciar Turno</Text>
-        <Text style={styles.subtitle}>Ingresá tu PIN de cajero</Text>
+        <Text style={styles.title}>{t('pos.title')} {t('auth.start_turn')}</Text>
+        <Text style={styles.subtitle}>{t('auth.enter_pin')}</Text>
       </View>
 
       {/* Indicadores de dígitos */}
