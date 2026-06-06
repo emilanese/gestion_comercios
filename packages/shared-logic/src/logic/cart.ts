@@ -1,5 +1,3 @@
-// @ts-nocheck — WatermelonDB queries, not type-checked in web context
-import { Database } from '@nozbe/watermelondb';
 import { v4 as uuidv4 } from 'uuid';
 
 /**

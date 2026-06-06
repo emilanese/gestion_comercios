@@ -1,3 +1,14 @@
+/**
+ * shared-logic/index.ts — Punto de entrada PÚBLICO del paquete.
+ *
+ * ⚠️  REGLA: Solo exportar código que funcione en web (Next.js) Y en mobile (Expo).
+ *    Los módulos que dependen de React Native, WatermelonDB, expo-camera, etc.
+ *    NO se exportan aquí. La mobile-app los importa directamente por path:
+ *      import { enrollDevice }  from '@comercios/shared-logic/src/logic/enrollment';
+ *      import { searchProducts } from '@comercios/shared-logic/src/logic/search';
+ *      import { EnrollmentForm } from '@comercios/shared-logic/src/components/EnrollmentForm';
+ */
+
 // Export config
 export * from './config';
 
@@ -48,7 +59,7 @@ export type {
   POSDbAccessors,
 } from './sync/reconnect';
 
-// Export i18n
+// Export i18n (pure TS, no RN dependency)
 export { i18n, getTranslation, t, setLanguage } from './i18n/i18n';
 export type { Locale } from './i18n/i18n';
 
@@ -72,21 +83,16 @@ export {
 } from './sync/syncConfig';
 export type { SyncTable, SyncField } from './sync/syncConfig';
 
-// Export business logic
+// Export business logic (web-compatible only)
+// ❌ Excluidos: enrollment (WatermelonDB), search (WatermelonDB), cart (WatermelonDB import)
 export * from './logic/tickets';
 export * from './logic/inventory';
 export * from './logic/promotions';
-export * from './logic/enrollment';
 export * from './logic/authentication';
 export * from './logic/turn';
 export * from './logic/cart';
-export * from './logic/search';
 
-// Export components
-export { EnrollmentForm } from './components/EnrollmentForm';
+// Export web-compatible components
+// ❌ Excluidos: TurnOpenScreen (react-native), EnrollmentForm (WatermelonDB+RN), QRScanner (expo-camera)
+// ❌ Excluido: utils/device (expo-constants)
 export { LoginScreen } from './components/LoginScreen';
-export { default as TurnOpenScreen } from './components/TurnOpenScreen';
-export { QRScanner } from './components/QRScanner';
-
-// Export device utils
-export * from './utils/device';

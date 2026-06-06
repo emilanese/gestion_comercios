@@ -26,6 +26,9 @@ const nextConfig = {
       '@nozbe/watermelondb',
       '@nozbe/watermelondb/decorators',
       '@nozbe/watermelondb/RawRecord',
+      'expo-camera',
+      'expo-constants',
+      'html5-qrcode',
     ];
     for (const pkg of rnOnlyPackages) {
       config.resolve.alias[pkg] = false;
